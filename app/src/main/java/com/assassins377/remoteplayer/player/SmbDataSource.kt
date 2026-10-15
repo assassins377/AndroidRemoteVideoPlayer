@@ -7,17 +7,19 @@ import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.DataSpec
+import com.assassins377.remoteplayer.data.ServerStore
 import com.assassins377.remoteplayer.data.SmbClientHolder
+import com.assassins377.remoteplayer.data.SmbUri
+import com.assassins377.remoteplayer.data.authContext
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
-import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.connection.Connection
 import com.hierynomus.smbj.share.DiskShare
 import com.hierynomus.smbj.share.File
 import java.io.IOException
 
-/** Media3 DataSource that reads smb://host/share/path?u=&p=&d= via smbj with random access (seek). */
+/** Media3 DataSource that reads rvp-smb://<serverId>/<path> via smbj (creds looked up by id) with random access (seek). */
 @UnstableApi
 class SmbDataSource : BaseDataSource(/* isNetwork = */ true) {
     private var connection: Connection? = null
@@ -33,17 +35,15 @@ class SmbDataSource : BaseDataSource(/* isNetwork = */ true) {
         val u = dataSpec.uri
         uri = u
         try {
-            val segments = u.pathSegments
-            require(segments.size >= 2) { "smb uri must be smb://host/share/path" }
-            val user = u.getQueryParameter("u").orEmpty()
-            val auth = if (user.isBlank()) AuthenticationContext.anonymous()
-            else AuthenticationContext(user, u.getQueryParameter("p").orEmpty().toCharArray(),
-                u.getQueryParameter("d")?.ifBlank { null })
-            val conn = SmbClientHolder.client.connect(u.host).also { connection = it }
-            val s = conn.authenticate(auth).connectShare(segments[0]) as DiskShare
+            val (serverId, path) = SmbUri.parse(u.toString())
+                ?: throw IOException("Bad SMB playback uri")
+            val server = ServerStore.get(serverId) ?: throw IOException("Unknown server $serverId")
+            val auth = server.authContext()
+            val conn = SmbClientHolder.client.connect(server.host).also { connection = it }
+            val s = conn.authenticate(auth).connectShare(server.share) as DiskShare
             share = s
             val f = s.openFile(
-                segments.drop(1).joinToString("\\"),
+                path.replace('/', '\\'),
                 setOf(AccessMask.GENERIC_READ), null,
                 SMB2ShareAccess.ALL, SMB2CreateDisposition.FILE_OPEN, null,
             )
@@ -92,7 +92,7 @@ class SmbDataSource : BaseDataSource(/* isNetwork = */ true) {
     }
 }
 
-/** Routes smb:// to SmbDataSource, everything else to the default (HTTP/file) source. */
+/** Routes rvp-smb:// to SmbDataSource, everything else to the default (HTTP/file) source. */
 @UnstableApi
 class RoutingDataSourceFactory(private val default: DataSource.Factory) : DataSource.Factory {
     override fun createDataSource(): DataSource = RoutingDataSource(default.createDataSource())
@@ -102,7 +102,7 @@ class RoutingDataSourceFactory(private val default: DataSource.Factory) : DataSo
         override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) =
             fallback.addTransferListener(transferListener)
         override fun open(dataSpec: DataSpec): Long {
-            val ds = if (dataSpec.uri.scheme == "smb") SmbDataSource() else fallback
+            val ds = if (dataSpec.uri.scheme == SmbUri.SCHEME) SmbDataSource() else fallback
             active = ds
             return ds.open(dataSpec)
         }

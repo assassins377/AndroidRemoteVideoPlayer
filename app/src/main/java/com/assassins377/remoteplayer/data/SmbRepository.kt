@@ -6,7 +6,6 @@ import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.share.DiskShare
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.URLEncoder
 
 class SmbRepository(private val client: SMBClient = SmbClientHolder.client) : RemoteFileRepository {
 
@@ -32,11 +31,15 @@ class SmbRepository(private val client: SMBClient = SmbClientHolder.client) : Re
             }
         }
 
-    /** smb://host/share/path?u=..&p=..&d=.. — credentials kept in-process only (TODO: secure storage). */
-    override fun playbackUri(server: ServerConfig, file: RemoteFile): String {
-        fun e(s: String) = URLEncoder.encode(s, "UTF-8")
-        val encodedPath = file.path.split('/').joinToString("/") { e(it).replace("+", "%20") }
-        return "smb://${server.host}/${e(server.share)}/$encodedPath?u=${e(server.username)}&p=${e(server.password)}&d=${e(server.domain)}"
+    /** Credentials are NOT in the link; see [SmbUri]. */
+    override fun playbackUri(server: ServerConfig, file: RemoteFile): String = SmbUri.build(server.id, file.path)
+
+    /** Connects, authenticates and opens the share root. Throws on failure. */
+    suspend fun testConnection(server: ServerConfig) = withContext(Dispatchers.IO) {
+        client.connect(server.host).use { c ->
+            (c.authenticate(server.authContext()).connectShare(server.share) as DiskShare).use { it.list("") }
+        }
+        Unit
     }
 }
 

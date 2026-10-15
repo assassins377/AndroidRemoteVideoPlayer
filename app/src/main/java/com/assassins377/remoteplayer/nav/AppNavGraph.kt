@@ -9,12 +9,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.assassins377.remoteplayer.ui.browser.FileBrowserScreen
 import com.assassins377.remoteplayer.ui.player.PlayerScreen
-import com.assassins377.remoteplayer.ui.servers.AddServerScreen
+import com.assassins377.remoteplayer.ui.servers.ServerEditScreen
 import com.assassins377.remoteplayer.ui.servers.ServerListScreen
 
 object Routes {
     const val SERVERS = "servers"
-    const val ADD_SERVER = "servers/add"
+    const val EDIT_SERVER = "servers/edit?id={id}"
+    fun editServer(id: String? = null) = if (id == null) "servers/edit" else "servers/edit?id=${Uri.encode(id)}"
     const val BROWSER = "browser/{serverId}"
     const val PLAYER = "player?uri={uri}"
     fun browser(serverId: String) = "browser/$serverId"
@@ -27,12 +28,16 @@ fun AppNavGraph() {
     NavHost(navController = nav, startDestination = Routes.SERVERS) {
         composable(Routes.SERVERS) {
             ServerListScreen(
-                onAdd = { nav.navigate(Routes.ADD_SERVER) },
+                onAdd = { nav.navigate(Routes.editServer()) },
+                onEdit = { nav.navigate(Routes.editServer(it.id)) },
                 onOpen = { nav.navigate(Routes.browser(it.id)) },
             )
         }
-        composable(Routes.ADD_SERVER) {
-            AddServerScreen(onDone = { nav.popBackStack() })
+        composable(
+            Routes.EDIT_SERVER,
+            arguments = listOf(navArgument("id") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) {
+            ServerEditScreen(serverId = it.arguments?.getString("id"), onDone = { nav.popBackStack() })
         }
         composable(Routes.BROWSER, arguments = listOf(navArgument("serverId") { type = NavType.StringType })) {
             FileBrowserScreen(

@@ -1,7 +1,11 @@
 package com.assassins377.remoteplayer.data
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class ServerType { SMB, HTTP, WEBDAV }
 
+@Serializable
 data class ServerConfig(
     val id: String,
     val name: String,
@@ -11,7 +15,8 @@ data class ServerConfig(
     /** SMB share name (SMB only) */
     val share: String = "",
     val username: String = "",
-    val password: String = "",
+    /** Never serialized to plain storage; kept encrypted by [SecretStore]. */
+    @kotlinx.serialization.Transient val password: String = "",
     val domain: String = "",
 )
 
