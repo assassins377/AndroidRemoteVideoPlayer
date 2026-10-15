@@ -1,0 +1,3 @@
+-dontwarn org.bouncycastle.**
+-dontwarn javax.el.**
+-dontwarn org.ietf.jgss.**
