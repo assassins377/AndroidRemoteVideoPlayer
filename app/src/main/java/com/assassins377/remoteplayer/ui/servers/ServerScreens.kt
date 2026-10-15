@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -28,11 +30,21 @@ fun ServerListScreen(
     onAdd: () -> Unit,
     onOpen: (ServerConfig) -> Unit,
     onEdit: (ServerConfig) -> Unit,
+    onSettings: () -> Unit = {},
     vm: ServersViewModel = viewModel(),
 ) {
     val servers by vm.servers.collectAsStateWithLifecycle()
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Серверы") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Серверы") },
+                actions = {
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.settings))
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = "Добавить") }
         },

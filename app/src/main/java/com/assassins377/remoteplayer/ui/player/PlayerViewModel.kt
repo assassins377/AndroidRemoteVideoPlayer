@@ -3,28 +3,47 @@ package com.assassins377.remoteplayer.ui.player
 import android.app.Application
 import androidx.annotation.OptIn
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import com.assassins377.remoteplayer.data.SmbError
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.assassins377.remoteplayer.data.RemoteFile
+import com.assassins377.remoteplayer.data.ServerStore
+import com.assassins377.remoteplayer.data.SmbError
+import com.assassins377.remoteplayer.data.SmbRepository
+import com.assassins377.remoteplayer.data.SmbUri
 import com.assassins377.remoteplayer.player.RoutingDataSourceFactory
+import com.assassins377.remoteplayer.settings.AppSettings
+import com.assassins377.remoteplayer.settings.DecoderMode
+import com.assassins377.remoteplayer.settings.FileSorter
+import com.assassins377.remoteplayer.settings.ResumeStore
+import com.assassins377.remoteplayer.settings.SettingsStore
+import com.assassins377.remoteplayer.settings.SubtitleMatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
-/** Owns the ExoPlayer so playback survives configuration changes. */
+/** Owns the ExoPlayer so playback survives configuration changes. Configured from [SettingsStore]. */
 @OptIn(UnstableApi::class)
 class PlayerViewModel(app: Application) : AndroidViewModel(app) {
-    /** Bigger buffers than default: LAN bitrate for 4K/remux MKV can spike; prefer time-based buffering. */
+    val settings: AppSettings = SettingsStore.current
+
     private val loadControl = DefaultLoadControl.Builder()
         .setBufferDurationsMs(
-            /* minBufferMs = */ 30_000,
-            /* maxBufferMs = */ 120_000,
+            /* minBufferMs = */ minOf(30_000, settings.bufferMaxSec * 1000),
+            /* maxBufferMs = */ settings.bufferMaxSec * 1000,
             /* bufferForPlaybackMs = */ 2_500,
             /* bufferForPlaybackAfterRebufferMs = */ 5_000,
         )
@@ -32,22 +51,50 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         .setPrioritizeTimeOverSizeThresholds(true)
         .build()
 
+    /** HW/SW preference: reorders decoders; AUTO keeps the platform order. */
+    private val codecSelector = MediaCodecSelector { mime, secure, tunneling ->
+        val all = MediaCodecUtil.getDecoderInfos(mime, secure, tunneling)
+        when (settings.decoder) {
+            DecoderMode.AUTO -> all
+            DecoderMode.HARDWARE -> all.sortedBy { !it.hardwareAccelerated }
+            DecoderMode.SOFTWARE -> all.sortedBy { !it.softwareOnly }
+        }
+    }
+
     val player: ExoPlayer = ExoPlayer.Builder(app)
+        .setRenderersFactory(DefaultRenderersFactory(app).setMediaCodecSelector(codecSelector).setEnableDecoderFallback(true))
         .setMediaSourceFactory(DefaultMediaSourceFactory(RoutingDataSourceFactory(DefaultDataSource.Factory(app))))
         .setLoadControl(loadControl)
+        .setSeekBackIncrementMs(settings.seekStepMs)
+        .setSeekForwardIncrementMs(settings.seekStepMs)
         .build()
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+    private val _speed = MutableStateFlow(settings.defaultSpeed)
+    val speed: StateFlow<Float> = _speed.asStateFlow()
+    private var currentUri: String? = null
 
     init {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+            if (settings.audioLanguage.isNotBlank()) setPreferredAudioLanguage(settings.audioLanguage)
+            if (settings.subtitleLanguage.isNotBlank()) setPreferredTextLanguage(settings.subtitleLanguage)
+        }.build()
+        player.setPlaybackSpeed(settings.defaultSpeed)
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 var c: Throwable? = error
                 while (c != null && c !is SmbError) c = c.cause
                 _error.value = (c as? SmbError)?.message ?: "Ошибка воспроизведения: ${error.errorCodeName}"
             }
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_ENDED) {
+                    currentUri?.let { ResumeStore.save(it, 0, 0) }
+                    if (settings.autoplayNext) playNext()
+                }
+            }
         })
+        viewModelScope.launch { while (isActive) { delay(10_000); savePosition() } }
     }
 
     fun retry() {
@@ -56,17 +103,56 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         player.playWhenReady = true
     }
 
-    private val _speed = MutableStateFlow(1f)
-    val speed: StateFlow<Float> = _speed.asStateFlow()
-    private var currentUri: String? = null
-
     fun play(uri: String) {
         if (uri == currentUri) return
+        savePosition()
         currentUri = uri
-        // TODO subtitles: MediaItem.SubtitleConfiguration for sidecar .srt/.vtt next to the video.
-        player.setMediaItem(MediaItem.fromUri(uri))
-        player.prepare()
-        player.playWhenReady = true
+        viewModelScope.launch {
+            val folder = folderListing(uri)
+            val item = MediaItem.Builder().setUri(uri)
+            if (settings.autoLoadSubtitles && folder != null) {
+                val (serverId, path) = SmbUri.parse(uri)!!
+                val subs = SubtitleMatcher.find(path.substringAfterLast('/'), folder).map { m ->
+                    MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(SmbUri.build(serverId, m.file.path)))
+                        .setMimeType(m.mimeType)
+                        .setLanguage(m.language)
+                        .setLabel(m.file.name)
+                        .setSelectionFlags(
+                            if (m.language != null && m.language.startsWith(settings.subtitleLanguage.take(2)) && settings.subtitleLanguage.isNotBlank())
+                                C.SELECTION_FLAG_DEFAULT else 0,
+                        )
+                        .build()
+                }
+                item.setSubtitleConfigurations(subs)
+            }
+            val start = if (settings.resume) ResumeStore.get(uri) ?: 0L else 0L
+            player.setMediaItem(item.build(), start)
+            player.prepare()
+            player.playWhenReady = true
+        }
+    }
+
+    /** SMB only: lists the video's folder (for sidecar subtitles and next-video). */
+    private suspend fun folderListing(uri: String): List<RemoteFile>? {
+        val (serverId, path) = SmbUri.parse(uri) ?: return null
+        val server = ServerStore.get(serverId) ?: return null
+        return runCatching { SmbRepository().list(server, path.substringBeforeLast('/', "")) }.getOrNull()
+    }
+
+    private fun playNext() {
+        val uri = currentUri ?: return
+        val (serverId, path) = SmbUri.parse(uri) ?: return
+        viewModelScope.launch {
+            val folder = folderListing(uri) ?: return@launch
+            val next = FileSorter.nextVideo(folder, path.substringAfterLast('/')) ?: return@launch
+            play(SmbUri.build(serverId, next.path))
+        }
+    }
+
+    fun savePosition() {
+        val uri = currentUri ?: return
+        if (!settings.resume || player.playbackState == Player.STATE_IDLE) return
+        ResumeStore.save(uri, player.currentPosition, player.duration.takeIf { it != C.TIME_UNSET } ?: 0)
     }
 
     fun setSpeed(value: Float) {
@@ -74,5 +160,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         player.setPlaybackSpeed(value)
     }
 
-    override fun onCleared() = player.release()
+    fun seekBy(deltaMs: Long) = player.seekTo((player.currentPosition + deltaMs).coerceAtLeast(0))
+
+    override fun onCleared() { savePosition(); player.release() }
 }
