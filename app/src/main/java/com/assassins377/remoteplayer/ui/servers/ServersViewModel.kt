@@ -21,12 +21,31 @@ sealed interface TestState {
     data class Failed(val message: String) : TestState
 }
 
+sealed interface SharesState {
+    data object Idle : SharesState
+    data object Loading : SharesState
+    data class Loaded(val names: List<String>) : SharesState
+    data class Failed(val message: String) : SharesState
+}
+
 class ServersViewModel : ViewModel() {
     val servers: StateFlow<List<ServerConfig>> = ServerStore.servers
 
     private val _test = MutableStateFlow<TestState>(TestState.Idle)
     val test: StateFlow<TestState> = _test.asStateFlow()
     private var testJob: Job? = null
+
+    private val _shares = MutableStateFlow<SharesState>(SharesState.Idle)
+    val shares: StateFlow<SharesState> = _shares.asStateFlow()
+
+    /** Lists SMB shares (needs host + credentials, share may be blank). Falls back to manual entry on failure. */
+    fun loadShares(server: ServerConfig) {
+        _shares.value = SharesState.Loading
+        viewModelScope.launch {
+            _shares.value = runCatching { withTimeout(20_000) { SmbRepository().listShares(server.copy(share = "")) } }
+                .fold({ SharesState.Loaded(it) }, { SharesState.Failed(it.message ?: it.toString()) })
+        }
+    }
 
     fun get(id: String?): ServerConfig? = id?.let(ServerStore::get)
 
@@ -37,7 +56,7 @@ class ServersViewModel : ViewModel() {
 
     fun remove(id: String) = viewModelScope.launch { ServerStore.remove(id) }
 
-    fun resetTest() { testJob?.cancel(); _test.value = TestState.Idle }
+    fun resetTest() { testJob?.cancel(); _test.value = TestState.Idle; _shares.value = SharesState.Idle }
 
     fun testConnection(server: ServerConfig) {
         testJob?.cancel()
@@ -46,7 +65,7 @@ class ServersViewModel : ViewModel() {
             _test.value = runCatching {
                 withTimeout(15_000) {
                     when (server.type) {
-                        ServerType.SMB -> SmbRepository().testConnection(server)
+                        ServerType.SMB -> SmbRepository().testConnection(server.copy(id = server.id.ifBlank { "__test__" }))
                         ServerType.HTTP -> httpHead(server.host)
                         ServerType.WEBDAV -> error("WebDAV пока не поддерживается")
                     }

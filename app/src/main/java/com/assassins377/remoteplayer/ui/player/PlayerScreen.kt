@@ -25,6 +25,7 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
     LifecycleStartEffect(vm) { onStopOrDispose { vm.player.pause() } }
     val speed by vm.speed.collectAsStateWithLifecycle()
     var menu by remember { mutableStateOf(false) }
+    val error by vm.error.collectAsStateWithLifecycle()
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
@@ -36,6 +37,17 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
             },
             modifier = Modifier.fillMaxSize(),
         )
+        error?.let { msg ->
+            Card(Modifier.align(Alignment.Center).padding(24.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(msg)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = vm::retry) { Text("Повторить") }
+                        OutlinedButton(onClick = onBack) { Text("Назад") }
+                    }
+                }
+            }
+        }
         Box(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
             FilledTonalButton(onClick = { menu = true }) { Text("${speed}x") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

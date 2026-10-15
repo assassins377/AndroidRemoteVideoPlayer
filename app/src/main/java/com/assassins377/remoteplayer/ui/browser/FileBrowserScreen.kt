@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.assassins377.remoteplayer.data.SmbErrorKind
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +43,11 @@ fun FileBrowserScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 state.loading -> CircularProgressIndicator(Modifier.padding(24.dp))
-                state.error != null -> Text("Ошибка: ${state.error}", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.error)
+                state.error != null -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                    if (state.kind == SmbErrorKind.AUTH) Text("Измените логин/пароль в настройках сервера.")
+                    Button(onClick = vm::reload) { Text("Повторить") }
+                }
                 else -> LazyColumn {
                     items(state.files, key = { it.path }) { f ->
                         ListItem(

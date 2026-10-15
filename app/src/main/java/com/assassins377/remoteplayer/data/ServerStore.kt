@@ -42,7 +42,10 @@ object ServerStore {
         if (list.any { it.id == server.id }) list.map { if (it.id == server.id) server else it } else list + server
     }
 
-    suspend fun remove(id: String) = save { list -> list.filterNot { it.id == id } }
+    suspend fun remove(id: String) {
+        save { list -> list.filterNot { it.id == id } }
+        SmbPool.invalidate(id)
+    }
 
     fun get(id: String): ServerConfig? = _servers.value.firstOrNull { it.id == id }
 

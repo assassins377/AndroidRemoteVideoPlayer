@@ -29,7 +29,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
     packaging {
-        resources.excludes += setOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/*.kotlin_module")
+        resources.excludes += setOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/*.kotlin_module", "META-INF/versions/9/OSGI-INF/MANIFEST.MF")
     }
 }
 
@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.media3.ui)
     implementation(libs.media3.datasource)
     implementation(libs.smbj)
+    implementation(libs.smbj.rpc) { exclude(group = "com.hierynomus", module = "smbj") }
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
