@@ -71,6 +71,7 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
     var domain by remember { mutableStateOf(existing?.domain ?: "") }
     var confirmDelete by remember { mutableStateOf(false) }
     val test by vm.test.collectAsStateWithLifecycle()
+    val shares by vm.shares.collectAsStateWithLifecycle()
     DisposableEffect(Unit) { onDispose { vm.resetTest() } }
 
     fun current() = ServerConfig(
@@ -111,7 +112,13 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
                 modifier = Modifier.fillMaxWidth(),
             )
             if (type == ServerType.SMB) {
-                OutlinedTextField(share, { share = it; vm.resetTest() }, label = { Text("Общая папка (share)") }, modifier = Modifier.fillMaxWidth())
+                SharePicker(
+                    share = share,
+                    onShare = { share = it },
+                    state = shares,
+                    enabled = host.isNotBlank(),
+                    onLoad = { vm.loadShares(current().copy(id = "__shares__")) },
+                )
             }
             if (type != ServerType.HTTP) {
                 OutlinedTextField(user, { user = it; vm.resetTest() }, label = { Text("Пользователь (пусто = гость)") }, modifier = Modifier.fillMaxWidth())
@@ -147,5 +154,46 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
             confirmButton = { TextButton(onClick = { vm.remove(existing.id); confirmDelete = false; onDone() }) { Text("Удалить") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Отмена") } },
         )
+    }
+}
+
+/** Manual share entry plus "load list" button (NetShareEnum). On failure manual entry still works. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SharePicker(
+    share: String,
+    onShare: (String) -> Unit,
+    state: SharesState,
+    enabled: Boolean,
+    onLoad: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    LaunchedEffect(state) { if (state is SharesState.Loaded && state.names.isNotEmpty()) expanded = true }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it && state is SharesState.Loaded }) {
+            OutlinedTextField(
+                share, onShare,
+                label = { Text("Общая папка (share)") },
+                trailingIcon = { if (state is SharesState.Loaded) ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
+            )
+            if (state is SharesState.Loaded) {
+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    state.names.forEach { n ->
+                        DropdownMenuItem(text = { Text(n) }, onClick = { onShare(n); expanded = false })
+                    }
+                }
+            }
+        }
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(enabled = enabled && state != SharesState.Loading, onClick = onLoad) { Text("Найти папки на сервере") }
+            when (state) {
+                SharesState.Loading -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                is SharesState.Loaded -> if (state.names.isEmpty()) Text("Папок не найдено — введите вручную")
+                is SharesState.Failed -> Text("Не удалось получить список: ${state.message}. Введите вручную.",
+                    color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                SharesState.Idle -> {}
+            }
+        }
     }
 }

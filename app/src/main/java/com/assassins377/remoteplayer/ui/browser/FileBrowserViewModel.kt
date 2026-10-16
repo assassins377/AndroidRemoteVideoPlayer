@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.assassins377.remoteplayer.data.RemoteFile
 import com.assassins377.remoteplayer.data.ServerStore
+import com.assassins377.remoteplayer.data.SmbError
+import com.assassins377.remoteplayer.data.SmbErrorKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +16,7 @@ data class BrowserState(
     val files: List<RemoteFile> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,
+    val kind: SmbErrorKind? = null,
 )
 
 class FileBrowserViewModel : ViewModel() {
@@ -35,9 +38,11 @@ class FileBrowserViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching { ServerStore.repositoryFor(server.type).list(server, path) }
                 .onSuccess { _state.value = BrowserState(path = path, files = it) }
-                .onFailure { _state.value = BrowserState(path = path, error = it.message ?: it.toString()) }
+                .onFailure { _state.value = BrowserState(path = path, error = it.message ?: it.toString(), kind = (it as? SmbError)?.kind) }
         }
     }
+
+    fun reload() = open(_state.value.path)
 
     /** Returns false when already at root. */
     fun up(): Boolean {
