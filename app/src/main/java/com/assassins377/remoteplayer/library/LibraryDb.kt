@@ -106,6 +106,7 @@ object LibrarySql {
     private fun where(query: String, servers: Collection<String>?, live: Collection<String>, args: MutableList<Any>, mode: LibraryMode = LibraryMode.ALL): String {
         val c = mutableListOf<String>()
         if (mode == LibraryMode.MOVIES) c += "seriesKey IS NULL"
+        if (mode == LibraryMode.SERIES) c += "seriesKey IS NOT NULL"
         c += "serverId IN (${live.joinToString(",") { "?" }})"; args.addAll(live)
         if (servers != null) { c += "serverId IN (${servers.joinToString(",") { "?" }})"; args.addAll(servers) }
         match(query)?.let { c += "id IN (SELECT rowid FROM entries_fts WHERE entries_fts MATCH ?)"; args += it }
@@ -125,7 +126,8 @@ object LibrarySql {
 
     fun count(query: String, servers: Collection<String>?, live: Collection<String>, mode: LibraryMode = LibraryMode.ALL): SupportSQLiteQuery {
         val args = mutableListOf<Any>()
-        return SimpleSQLiteQuery("SELECT COUNT(*) FROM entries WHERE ${where(query, servers, live, args, mode)}", args.toTypedArray())
+        val what = if (mode == LibraryMode.SERIES) "COUNT(DISTINCT seriesKey)" else "COUNT(*)"
+        return SimpleSQLiteQuery("SELECT $what FROM entries WHERE ${where(query, servers, live, args, mode)}", args.toTypedArray())
     }
 
     /** Series grouped by seriesKey (search/filter apply to episodes). */

@@ -45,7 +45,7 @@ object LibraryRows {
         val ep = Episodes.detect(path.trim('/'), name)
         return EntryRow(id, serverId, path.trim('/'), name, p.display, p.display.lowercase().replace('ё', 'е'), p.year, size, modified,
             addedAt, scanId, LibrarySql.normalize(name), LibrarySql.normalize(p.display + " " + (ep?.title ?: "")),
-            ep?.let { Episodes.key(it.title) }, ep?.title, ep?.season, ep?.episode)
+            ep?.let { Episodes.key(it.title, it.year) }, ep?.title, ep?.season, ep?.episode)
     }
 }
 
@@ -205,14 +205,16 @@ object LibraryStore {
     suspend fun clear() { job?.cancelAndJoin(); db.dao().clear(); prefs?.edit()?.remove("updatedAt")?.apply(); _state.value = LibraryState() }
 }
 
-data class EpisodeInfo(val title: String, val season: Int, val episode: Int?)
+data class EpisodeInfo(val title: String, val season: Int, val episode: Int?, val year: Int? = null)
 
 /** Episode detection from file name, with folder fallbacks ("Show/Season 2/E05.mkv", "Show (2008)/S01E02.mkv"). */
 object Episodes {
     private val SEASON_DIR = Regex("""^(?:season|сезон|s)\s*(\d{1,2})$|^(\d{1,2})\s*сезон$""", RegexOption.IGNORE_CASE)
     private val BARE_EP = Regex("""(?:^|[ ._\-\[])(?:e|ep|episode|серия)\s*(\d{1,3})(?:[ ._\-\]]|$)""", RegexOption.IGNORE_CASE)
 
-    fun key(title: String) = title.lowercase().replace('ё', 'е').replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+    /** Grouping key; the year keeps same-named shows apart (Doctor Who 1963 vs 2005). */
+    fun key(title: String, year: Int? = null) = baseKey(title) + (year?.let { " $it" } ?: "")
+    private fun baseKey(title: String) = title.lowercase().replace('ё', 'е').replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
 
     fun detect(path: String, name: String): EpisodeInfo? {
         val dirs = path.split('/').dropLast(1)
@@ -226,7 +228,8 @@ object Episodes {
         val showDir = (if (seasonDir != null) dirs.dropLast(1) else dirs).lastOrNull()
         val fromFile = p.title.takeIf { it.isNotBlank() && !Regex("""^(?:s\d+(?:e\d+)?|e\d+|ep\s*\d+|\d+|(?:серия|episode)\s*\d+|\d+\s*серия)$""", RegexOption.IGNORE_CASE).matches(it.trim()) && p.season != null }
         val title = fromFile ?: showDir?.let { TitleParser.parseFolder(it)?.title ?: TitleParser.parse(it).title } ?: p.title
-        return EpisodeInfo(title, season, episode)
+        val year = showDir?.let { TitleParser.parse(it).year } ?: p.year
+        return EpisodeInfo(title, season, episode, year)
     }
 
     /** Next episode after [current] in an ordered episode list (by season, episode, path). */

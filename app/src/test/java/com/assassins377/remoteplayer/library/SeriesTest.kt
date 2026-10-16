@@ -16,10 +16,13 @@ class SeriesTest {
         assertEquals(EpisodeInfo("Breaking Bad", 1, 2), Episodes.detect("TV/Breaking.Bad.S01E02.720p.mkv", "Breaking.Bad.S01E02.720p.mkv"))
         assertEquals(EpisodeInfo("The Office", 2, 3), Episodes.detect("The.Office.2x03.mkv", "The.Office.2x03.mkv"))
         assertEquals(EpisodeInfo("Слово пацана", 1, 4), Episodes.detect("Слово пацана/Сезон 1/Серия 04.mkv", "Серия 04.mkv"))
-        assertEquals(EpisodeInfo("Lost", 3, 5), Episodes.detect("Lost (2004)/Season 3/E05.mkv", "E05.mkv"))
+        assertEquals(EpisodeInfo("Lost", 3, 5, 2004), Episodes.detect("Lost (2004)/Season 3/E05.mkv", "E05.mkv"))
         assertEquals(EpisodeInfo("Dark", 1, 1), Episodes.detect("Dark/S01E01.mkv", "S01E01.mkv"))
         assertNull(Episodes.detect("Movies/The.Matrix.1999.mkv", "The.Matrix.1999.mkv"))
         assertEquals(Episodes.key("Breaking Bad"), Episodes.key("breaking.bad"))
+        val a = LibraryRows.of("a", "Doctor.Who.1963.S01E01.mkv", "Doctor.Who.1963.S01E01.mkv", 0, 0, 0, 1)
+        val b = LibraryRows.of("a", "Doctor.Who.2005.S01E01.mkv", "Doctor.Who.2005.S01E01.mkv", 0, 0, 0, 1)
+        assertNotEquals(a.seriesKey, b.seriesKey)
     }
 
     @Test fun groupingAndNext() = runBlocking {
@@ -31,6 +34,7 @@ class SeriesTest {
         assertEquals(listOf("Breaking Bad" to 3, "Lost" to 1), series.map { it.seriesTitle to it.episodes })
         assertEquals(2, series[0].seasons)
         assertEquals(1, dao.queryCount(LibrarySql.count("", null, listOf("a"), LibraryMode.MOVIES)))
+        assertEquals(2, dao.queryCount(LibrarySql.count("", null, listOf("a"), LibraryMode.SERIES)))
         val eps = dao.episodes(Episodes.key("Breaking Bad"), listOf("a"))
         assertEquals(listOf(1 to 1, 1 to 2, 2 to 1), eps.map { it.season to it.episode })
         assertEquals("BB/Breaking.Bad.S02E01.mkv", Episodes.next(eps, eps[1])?.path)
@@ -43,5 +47,6 @@ class SeriesTest {
     @Test fun watchedThreshold() {
         assertTrue(WatchedStore.shouldMark(91_000, 100_000)); assertFalse(WatchedStore.shouldMark(50_000, 100_000)); assertFalse(WatchedStore.shouldMark(5, 0))
         val k = WatchedStore.key("a", "/x.mkv"); WatchedStore.set(k, true); assertTrue(WatchedStore.isWatched("a/x.mkv")); WatchedStore.toggle(k); assertFalse(WatchedStore.isWatched(k))
+        WatchedStore.setAll(mapOf("a/1" to true, "a/2" to true)); assertTrue(WatchedStore.isWatched("a/2"))
     }
 }
