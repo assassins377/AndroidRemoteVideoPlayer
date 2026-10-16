@@ -18,6 +18,7 @@ data class BrowserState(
     val loading: Boolean = false,
     val error: String? = null,
     val kind: SmbErrorKind? = null,
+    val cert: com.assassins377.remoteplayer.data.CertInfo? = null,
 )
 
 class FileBrowserViewModel : ViewModel() {
@@ -39,11 +40,17 @@ class FileBrowserViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching { ServerStore.repositoryFor(server.type).list(server, path) }
                 .onSuccess { _state.value = BrowserState(path = path, files = it) }
-                .onFailure { _state.value = BrowserState(path = path, error = it.message ?: it.toString(), kind = (it as? SmbError)?.kind) }
+                .onFailure { _state.value = BrowserState(path = path, error = it.message ?: it.toString(), kind = (it as? SmbError)?.kind, cert = com.assassins377.remoteplayer.data.CertInfo.from(it)) }
         }
     }
 
     fun reload() = open(_state.value.path)
+
+    /** User accepted the shown certificate: pin it for this server and retry. */
+    fun trust(cert: com.assassins377.remoteplayer.data.CertInfo) {
+        val server = ServerStore.get(serverId) ?: return
+        viewModelScope.launch { ServerStore.upsert(server.copy(pinnedCertSha256 = cert.sha256)); reload() }
+    }
 
     /** Returns false when already at root. */
     fun up(): Boolean {

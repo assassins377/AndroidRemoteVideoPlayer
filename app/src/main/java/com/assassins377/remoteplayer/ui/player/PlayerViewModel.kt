@@ -87,7 +87,9 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
                 while (c != null && c !is SmbError) c = c.cause
                 var h: Throwable? = error
                 while (h != null && h !is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) h = h.cause
-                _error.value = (c as? SmbError)?.message
+                val cert = com.assassins377.remoteplayer.data.CertInfo.from(error)
+                _error.value = cert?.let { com.assassins377.remoteplayer.data.HttpErrors.wrap(error).kind.message + ". Откройте папку заново, чтобы проверить сертификат." }
+                    ?: (c as? SmbError)?.message
                     ?: (h as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.let { com.assassins377.remoteplayer.data.HttpErrors.forCode(it.responseCode).message }
                     ?: "Ошибка воспроизведения: ${error.errorCodeName}"
             }

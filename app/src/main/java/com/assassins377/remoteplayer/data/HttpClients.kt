@@ -59,7 +59,11 @@ object HttpClients {
     fun forServer(server: ServerConfig): OkHttpClient = clients.getOrPut(server) {
         val s = SettingsStore.current
         val basicKnown = java.util.concurrent.atomic.AtomicBoolean(false)
+        val tm = PinningTrustManager(CertPins.systemTrustManager(), server.pinnedCertSha256)
+        val ssl = javax.net.ssl.SSLContext.getInstance("TLS").apply { init(null, arrayOf(tm), null) }
         base.newBuilder()
+            .sslSocketFactory(ssl.socketFactory, tm)
+            .hostnameVerifier(PinnedHostnameVerifier(okhttp3.internal.tls.OkHostnameVerifier, server.pinnedCertSha256))
             .connectTimeout(s.timeoutSec.toLong(), TimeUnit.SECONDS)
             .readTimeout(s.timeoutSec + 10L, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
@@ -106,11 +110,17 @@ object HttpErrors {
 
     fun check(r: Response) { if (!r.isSuccessful && r.code != 207) throw SmbError(forCode(r.code), IOException("HTTP ${r.code}")) }
 
-    fun wrap(t: Throwable): SmbError = when (t) {
-        is SmbError -> t
+    fun wrap(t: Throwable): SmbError = when {
+        t is SmbError -> t
+        CertInfo.from(t) != null -> SmbError(if (CertInfo.from(t)!!.pinMismatch) SmbErrorKind.CERT_CHANGED else SmbErrorKind.CERT_UNTRUSTED, t)
+        else -> wrapIo(t)
+    }
+
+    private fun wrapIo(t: Throwable): SmbError = when (t) {
         is UnknownHostException -> SmbError(SmbErrorKind.HOST_UNKNOWN, t)
         is SocketTimeoutException -> SmbError(SmbErrorKind.TIMEOUT, t)
         is ConnectException, is NoRouteToHostException -> SmbError(SmbErrorKind.UNREACHABLE, t)
+        is javax.net.ssl.SSLPeerUnverifiedException -> SmbError(SmbErrorKind.CERT_HOSTNAME, t)
         is IOException -> SmbError(SmbErrorKind.NETWORK, t)
         else -> SmbError(SmbErrorKind.UNKNOWN, t)
     }

@@ -63,6 +63,7 @@ fun FileBrowserScreen(
                 state.error != null -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(state.error!!, color = MaterialTheme.colorScheme.error)
                     if (state.kind == SmbErrorKind.AUTH) Text("Измените логин/пароль в настройках сервера.")
+                    state.cert?.let { c -> com.assassins377.remoteplayer.ui.servers.CertCard(c) { vm.trust(c) } }
                     Button(onClick = vm::reload) { Text("Повторить") }
                 }
                 settings.grid -> LazyVerticalGrid(GridCells.Adaptive(120.dp), contentPadding = PaddingValues(8.dp)) {
