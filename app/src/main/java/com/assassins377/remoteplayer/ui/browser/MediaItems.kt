@@ -73,13 +73,24 @@ fun subline(f: RemoteFile, p: ParsedTitle?): String? = when {
 }
 
 @Composable
-fun Poster(f: RemoteFile, m: TmdbMeta?, modifier: Modifier) {
+fun Poster(f: RemoteFile, m: TmdbMeta?, modifier: Modifier, serverId: String? = null) {
+    val s by com.assassins377.remoteplayer.settings.SettingsStore.settings.collectAsState()
+    val thumbUri = remember(serverId, f.path) {
+        if (serverId == null || !f.isVideo) null
+        else com.assassins377.remoteplayer.data.ServerStore.get(serverId)?.let { srv -> com.assassins377.remoteplayer.data.ServerStore.repositoryFor(srv.type).playbackUri(srv, f) }
+    }
+    val thumb by produceState(thumbUri?.let { com.assassins377.remoteplayer.player.Thumbnails.cached(it) }, thumbUri, m, s.videoThumbnails) {
+        if (value == null && m?.posterPath == null && thumbUri != null && s.videoThumbnails) {
+            delay(600) // only for items that stay on screen
+            value = com.assassins377.remoteplayer.player.Thumbnails.get(thumbUri)
+        }
+    }
     val fallback = @Composable {
         Box(modifier, contentAlignment = Alignment.Center) {
             Icon(if (f.isDirectory) Icons.Default.Folder else Icons.Default.Movie, null, Modifier.fillMaxSize(0.6f))
         }
     }
-    val url = m?.posterUrl()
+    val url = m?.posterUrl() ?: thumb
     if (url == null) fallback() else SubcomposeAsyncImage(
         model = url, contentDescription = null, contentScale = ContentScale.Crop,
         modifier = modifier.clip(MaterialTheme.shapes.small),
@@ -95,7 +106,7 @@ fun FileRow(
 ) {
     val (p, m) = rememberMeta(f, s, serverId)
     ListItem(
-        leadingContent = { Poster(f, m, Modifier.width(40.dp).height(60.dp)) },
+        leadingContent = { Poster(f, m, Modifier.width(40.dp).height(60.dp), serverId) },
         headlineContent = { Text(headline(f, p, m), maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = subline(f, p)?.let { { Text(it) } },
         trailingContent = onStar?.let { star -> {
@@ -115,7 +126,7 @@ fun FileCard(f: RemoteFile, s: AppSettings, serverId: String, onClick: () -> Uni
     val (p, m) = rememberMeta(f, s, serverId)
     Card(Modifier.padding(4.dp).combinedClickable(onClick = onClick, onLongClick = { if (p != null) onDetails(f, p, m) })) {
         Column(Modifier.padding(6.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Poster(f, m, Modifier.fillMaxWidth().aspectRatio(2f / 3f))
+            Poster(f, m, Modifier.fillMaxWidth().aspectRatio(2f / 3f), serverId)
             Text(headline(f, p, m), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
             subline(f, p)?.let { Text(it, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
         }
@@ -133,7 +144,7 @@ fun DetailsSheet(serverId: String, f: RemoteFile, p: ParsedTitle?, m: TmdbMeta?,
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Poster(f, meta, Modifier.width(110.dp).height(165.dp))
+                Poster(f, meta, Modifier.width(110.dp).height(165.dp), serverId)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(headline(f, p, meta), style = MaterialTheme.typography.titleLarge)
                     meta?.originalTitle?.takeIf { it.isNotBlank() && it != meta.title }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }

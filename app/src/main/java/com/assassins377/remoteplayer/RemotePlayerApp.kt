@@ -13,6 +13,7 @@ class RemotePlayerApp : Application() {
         com.assassins377.remoteplayer.settings.FavoritesStore.init(this)
         SettingsStore.init(this)
         ResumeStore.init(this)
+        com.assassins377.remoteplayer.player.Thumbnails.init(this)
         com.assassins377.remoteplayer.player.SubtitleDelayStore.init(this)
         com.assassins377.remoteplayer.settings.WatchedStore.init(this)
         com.assassins377.remoteplayer.meta.TmdbRepository.init(this)

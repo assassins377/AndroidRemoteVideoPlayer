@@ -125,6 +125,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             Section(R.string.sec_tmdb)
             Toggle(R.string.tmdb_enabled, s.tmdbEnabled) { set("tmdbEnabled", it); TmdbRepository.resetAuth() }
+            Toggle(R.string.video_thumbnails, s.videoThumbnails) { set("videoThumbnails", it) }
             var keyInput by remember { mutableStateOf("") }
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(if (s.tmdbKeyEnc.isNotBlank()) R.string.tmdb_key_set else R.string.tmdb_key_none),
@@ -158,7 +159,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             Section(R.string.sec_data)
             Action(R.string.clear_cache) {
-                scope.launch(Dispatchers.IO) { ctx.cacheDir.listFiles()?.forEach { it.deleteRecursively() }; SmbPool.invalidateAll(); TmdbRepository.clearCache() }
+                scope.launch(Dispatchers.IO) { ctx.cacheDir.listFiles()?.forEach { it.deleteRecursively() }; com.assassins377.remoteplayer.player.Thumbnails.clear(); SmbPool.invalidateAll(); TmdbRepository.clearCache() }
                 toast(done)
             }
             Action(R.string.clear_history) { ResumeStore.clear(); toast(done) }
