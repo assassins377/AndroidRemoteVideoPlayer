@@ -58,6 +58,20 @@ class LibraryTest {
         assertEquals(listOf("Movies", "Фильмы/Новые"), LibraryScanner.parseRoots("/Movies/\nФильмы/Новые, Movies"))
         assertEquals(1, LibraryScanner.scan(srv, repo, listOf("Movies/Deep"), 3))
         try { LibraryScanner.scan(srv, repo, listOf("missing"), 3); fail() } catch (_: SmbError) {}
+        // One missing root among several is skipped.
+        assertEquals(2, LibraryScanner.scan(srv, repo, listOf("missing", "Movies"), 3))
+    }
+
+    @Test fun nestedNetworkFailureFailsScan() = runBlocking {
+        val flaky = object : RemoteFileRepository {
+            override suspend fun list(server: ServerConfig, path: String) = when (path) {
+                "" -> listOf(RemoteFile("A", "A", true), RemoteFile("B", "B", true))
+                "A" -> throw SmbError(SmbErrorKind.ACCESS_DENIED, null)
+                else -> throw SmbError(SmbErrorKind.NETWORK, null)
+            }
+            override fun playbackUri(server: ServerConfig, file: RemoteFile) = ""
+        }
+        try { LibraryScanner.scan(srv, flaky, listOf(""), 3); fail() } catch (e: SmbError) { assertEquals(SmbErrorKind.NETWORK, e.kind) }
     }
 
     @Test fun ftsMatchExpression() {

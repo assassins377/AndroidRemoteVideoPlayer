@@ -102,10 +102,33 @@ class StreamProxy(private val sourceFactory: () -> DataSource) {
             shared ?: StreamProxy { RoutingDataSourceFactory(DefaultDataSource.Factory(ctx.applicationContext)).createDataSource() }.start().also { shared = it }
         }
 
-        /** First site-local IPv4 address (Wi-Fi / Ethernet), e.g. 192.168.1.23. */
-        fun lanAddress(): String? = runCatching {
-            NetworkInterface.getNetworkInterfaces().toList().filter { it.isUp && !it.isLoopback }
-                .flatMap { it.inetAddresses.toList() }.filterIsInstance<Inet4Address>().firstOrNull { it.isSiteLocalAddress }?.hostAddress
+        /**
+         * Address the cast target can reach: the IPv4 of the Wi-Fi/Ethernet network (not VPN/cellular), else the
+         * local address routed towards [targetHost] (DLNA), else the first site-local IPv4.
+         */
+        fun lanAddress(ctx: Context, targetHost: String? = null): String? {
+            wifiOrEthernetIpv4(ctx)?.let { return it }
+            targetHost?.let { h -> routedTo(h)?.let { return it } }
+            return runCatching {
+                NetworkInterface.getNetworkInterfaces().toList().filter { it.isUp && !it.isLoopback && !it.isVirtual && !it.name.startsWith("tun") && !it.name.startsWith("rmnet") }
+                    .flatMap { it.inetAddresses.toList() }.filterIsInstance<Inet4Address>().firstOrNull { it.isSiteLocalAddress }?.hostAddress
+            }.getOrNull()
+        }
+
+        /** Local source address the OS picks for [host] (connected UDP socket, nothing is sent). */
+        fun routedTo(host: String): String? = runCatching {
+            java.net.DatagramSocket().use { s -> s.connect(java.net.InetAddress.getByName(host), 9); (s.localAddress as? Inet4Address)?.takeIf { !it.isAnyLocalAddress }?.hostAddress }
+        }.getOrNull()
+
+        private fun wifiOrEthernetIpv4(ctx: Context): String? = runCatching {
+            val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            @Suppress("DEPRECATION") val nets = cm.allNetworks
+            nets.mapNotNull { n ->
+                val caps = cm.getNetworkCapabilities(n) ?: return@mapNotNull null
+                val lan = caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+                if (!lan || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)) null
+                else cm.getLinkProperties(n)?.linkAddresses?.map { it.address }?.filterIsInstance<Inet4Address>()?.firstOrNull()?.hostAddress
+            }.firstOrNull()
         }.getOrNull()
 
         fun mimeFor(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {

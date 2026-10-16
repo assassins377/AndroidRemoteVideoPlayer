@@ -18,6 +18,11 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = TestApp::class)
 class DownloadTest {
+    @Test fun workNamesDontCollide() {
+        org.junit.Assert.assertEquals("Aa".hashCode(), "BB".hashCode())
+        org.junit.Assert.assertNotEquals(com.assassins377.remoteplayer.download.DownloadStore.tagFor("smb://x/Aa.mkv"), com.assassins377.remoteplayer.download.DownloadStore.tagFor("smb://x/BB.mkv"))
+    }
+
     @Test fun safeNameAndStore() {
         val app = ApplicationProvider.getApplicationContext<Application>()
         DownloadStore.init(app, File(app.filesDir, "dl"))
