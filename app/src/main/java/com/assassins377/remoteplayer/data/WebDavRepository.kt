@@ -81,7 +81,7 @@ class WebDavRepository : RemoteFileRepository {
         try {
             HttpClients.forServer(server).newCall(req).execute().use { r ->
                 HttpErrors.check(r)
-                if (r.code != 207) throw SmbError(SmbErrorKind.UNKNOWN, java.io.IOException("Не WebDAV-сервер (HTTP ${r.code})"))
+                if (r.code != 207) throw SmbError(SmbErrorKind.UNKNOWN, java.io.IOException(com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.err_not_webdav, "Не WebDAV-сервер (HTTP %d)", r.code)))
                 PropfindParser.parse(r.body!!.string(), UrlPaths.hrefPath(server.host), path)
                     .filter { it.isDirectory || it.isVideo || it.isSubtitle }
             }

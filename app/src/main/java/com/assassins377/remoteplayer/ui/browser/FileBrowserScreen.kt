@@ -17,6 +17,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.assassins377.remoteplayer.data.SmbErrorKind
 import com.assassins377.remoteplayer.data.RemoteFile
+import com.assassins377.remoteplayer.settings.Favorite
+import com.assassins377.remoteplayer.settings.FavoritesStore
+import com.assassins377.remoteplayer.settings.FileFilter
+import com.assassins377.remoteplayer.meta.TitleParser
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import com.assassins377.remoteplayer.meta.ParsedTitle
 import com.assassins377.remoteplayer.meta.TmdbMeta
 import com.assassins377.remoteplayer.settings.FileSorter
@@ -30,16 +36,25 @@ import androidx.compose.ui.Alignment
 @Composable
 fun FileBrowserScreen(
     serverId: String,
+    startPath: String = "",
     onPlay: (String) -> Unit,
     onBack: () -> Unit,
     vm: FileBrowserViewModel = viewModel(),
 ) {
-    LaunchedEffect(serverId) { vm.init(serverId) }
+    LaunchedEffect(serverId) { vm.init(serverId, startPath) }
     val state by vm.state.collectAsStateWithLifecycle()
     val settings by SettingsStore.settings.collectAsStateWithLifecycle()
-    val files = remember(state.files, settings.sort, settings.showHidden) {
-        FileSorter.sort(state.files, settings.sort, settings.showHidden)
+    var query by remember { mutableStateOf("") }
+    var searching by remember { mutableStateOf(false) }
+    LaunchedEffect(state.path) { query = ""; searching = false }
+    val files = remember(state.files, settings.sort, settings.showHidden, query) {
+        FileSorter.sort(state.files, settings.sort, settings.showHidden).filter {
+            query.isBlank() || FileFilter.matches(it.name, if (it.isVideo) TitleParser.parse(it.name).display else null, query)
+        }
     }
+    val favs by FavoritesStore.items.collectAsStateWithLifecycle()
+    val favKeys = remember(favs) { favs.map { it.key }.toSet() }
+    val onStar = { f: RemoteFile -> FavoritesStore.toggle(Favorite(serverId, f.path, f.name, f.isDirectory)); Unit }
     val onClick = { f: RemoteFile -> if (f.isDirectory) vm.open(f.path) else vm.playbackUri(f)?.let(onPlay); Unit }
     var details by remember { mutableStateOf<Triple<RemoteFile, ParsedTitle?, TmdbMeta?>?>(null) }
     val onDetails = { f: RemoteFile, p: ParsedTitle?, m: TmdbMeta? -> details = Triple(f, p, m) }
@@ -50,9 +65,18 @@ fun FileBrowserScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.path.isBlank()) "/" else "/${state.path}") },
+                title = {
+                    if (searching) TextField(query, { query = it }, singleLine = true, placeholder = { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.search_hint)) },
+                        modifier = Modifier.fillMaxWidth())
+                    else Text(if (state.path.isBlank()) "/" else "/${state.path}")
+                },
+                actions = {
+                    IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
+                        Icon(if (searching) Icons.Default.Close else Icons.Default.Search, androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.search))
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = goBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад") }
+                    IconButton(onClick = goBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.back)) }
                 },
             )
         },
@@ -62,15 +86,18 @@ fun FileBrowserScreen(
                 state.loading -> CircularProgressIndicator(Modifier.padding(24.dp))
                 state.error != null -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                    if (state.kind == SmbErrorKind.AUTH) Text("Измените логин/пароль в настройках сервера.")
+                    if (state.kind == SmbErrorKind.AUTH) Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.auth_hint))
                     state.cert?.let { c -> com.assassins377.remoteplayer.ui.servers.CertCard(c) { vm.trust(c) } }
-                    Button(onClick = vm::reload) { Text("Повторить") }
+                    Button(onClick = vm::reload) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.retry)) }
                 }
                 settings.grid -> LazyVerticalGrid(GridCells.Adaptive(120.dp), contentPadding = PaddingValues(8.dp)) {
                     gridItems(files, key = { it.path }) { f -> FileCard(f, settings, serverId, { onClick(f) }, onDetails) }
                 }
+                files.isEmpty() && query.isNotBlank() -> Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.nothing_found), Modifier.padding(24.dp))
                 else -> LazyColumn {
-                    items(files, key = { it.path }) { f -> FileRow(f, settings, serverId, { onClick(f) }, onDetails) }
+                    items(files, key = { it.path }) { f ->
+                        FileRow(f, settings, serverId, { onClick(f) }, onDetails, starred = f.path.let { Favorite.key(serverId, it) } in favKeys, onStar = { onStar(f) })
+                    }
                 }
             }
         }

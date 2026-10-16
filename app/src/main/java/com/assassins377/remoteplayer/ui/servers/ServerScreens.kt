@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,14 +32,17 @@ fun ServerListScreen(
     onOpen: (ServerConfig) -> Unit,
     onEdit: (ServerConfig) -> Unit,
     onSettings: () -> Unit = {},
+    onFavorites: () -> Unit = {},
+    onPlay: (String) -> Unit = {},
     vm: ServersViewModel = viewModel(),
 ) {
     val servers by vm.servers.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Серверы") },
+                title = { Text(stringResource(com.assassins377.remoteplayer.R.string.servers)) },
                 actions = {
+                    IconButton(onClick = onFavorites) { Icon(Icons.Default.Star, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.favorites)) }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.settings))
                     }
@@ -46,21 +50,22 @@ fun ServerListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = "Добавить") }
+            FloatingActionButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.add)) }
         },
     ) { padding ->
         if (servers.isEmpty()) {
             Box(Modifier.padding(padding).fillMaxSize().padding(24.dp)) {
-                Text("Нет серверов. Нажмите +, чтобы добавить SMB, HTTP или WebDAV.")
+                Text(stringResource(com.assassins377.remoteplayer.R.string.no_servers))
             }
         } else {
             LazyColumn(Modifier.padding(padding)) {
+                item(key = "__continue") { com.assassins377.remoteplayer.ui.home.ContinueWatchingRow(onPlay) }
                 items(servers, key = { it.id }) { s ->
                     ListItem(
                         headlineContent = { Text(s.name) },
                         supportingContent = { Text("${s.type} · ${s.host}${if (s.share.isNotBlank()) "/" + s.share else ""}") },
                         trailingContent = {
-                            IconButton(onClick = { onEdit(s) }) { Icon(Icons.Default.Edit, contentDescription = "Изменить") }
+                            IconButton(onClick = { onEdit(s) }) { Icon(Icons.Default.Edit, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.edit)) }
                         },
                         modifier = Modifier.clickable { onOpen(s) },
                     )
@@ -96,10 +101,10 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (existing == null) "Новый сервер" else "Изменить сервер") },
+                title = { Text(if (existing == null) stringResource(com.assassins377.remoteplayer.R.string.new_server) else stringResource(com.assassins377.remoteplayer.R.string.edit_server)) },
                 actions = {
                     if (existing != null) IconButton(onClick = { confirmDelete = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.delete))
                     }
                 },
             )
@@ -118,10 +123,10 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
                     ) { Text(t.name) }
                 }
             }
-            OutlinedTextField(name, { name = it }, label = { Text("Название") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(name, { name = it }, label = { Text(stringResource(com.assassins377.remoteplayer.R.string.name)) }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 host, { host = it; vm.resetTest() },
-                label = { Text(if (type == ServerType.SMB) "Хост (192.168.1.10)" else "URL (http://...)") },
+                label = { Text(if (type == ServerType.SMB) stringResource(com.assassins377.remoteplayer.R.string.host_smb) else stringResource(com.assassins377.remoteplayer.R.string.host_url)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -135,36 +140,36 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
                 )
             }
             run { // Basic/Digest for HTTP and WebDAV, NTLM for SMB
-                OutlinedTextField(user, { user = it; vm.resetTest() }, label = { Text("Пользователь (пусто = гость)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(user, { user = it; vm.resetTest() }, label = { Text(stringResource(com.assassins377.remoteplayer.R.string.user_hint)) }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
-                    pass, { pass = it; vm.resetTest() }, label = { Text("Пароль") },
+                    pass, { pass = it; vm.resetTest() }, label = { Text(stringResource(com.assassins377.remoteplayer.R.string.password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
             if (type == ServerType.SMB) {
-                OutlinedTextField(domain, { domain = it; vm.resetTest() }, label = { Text("Домен (необязательно)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(domain, { domain = it; vm.resetTest() }, label = { Text(stringResource(com.assassins377.remoteplayer.R.string.domain_hint)) }, modifier = Modifier.fillMaxWidth())
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(enabled = valid && test != TestState.Running, onClick = { vm.testConnection(current()) }) {
-                    Text("Проверить подключение")
+                    Text(stringResource(com.assassins377.remoteplayer.R.string.test_connection))
                 }
-                Button(enabled = valid, onClick = { vm.save(current(), onDone) }) { Text("Сохранить") }
+                Button(enabled = valid, onClick = { vm.save(current(), onDone) }) { Text(stringResource(com.assassins377.remoteplayer.R.string.save)) }
             }
             when (val t = test) {
                 TestState.Idle -> {}
                 TestState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                TestState.Ok -> Text("Подключение успешно", color = MaterialTheme.colorScheme.primary)
+                TestState.Ok -> Text(stringResource(com.assassins377.remoteplayer.R.string.connection_ok), color = MaterialTheme.colorScheme.primary)
                 is TestState.Failed -> {
-                    Text("Ошибка: ${t.message}", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(com.assassins377.remoteplayer.R.string.error_fmt, t.message), color = MaterialTheme.colorScheme.error)
                     t.cert?.let { c -> CertCard(c) { pin = c.sha256; vm.testConnection(current()) } }
                 }
             }
             if (pin.isNotBlank() && type != ServerType.SMB) {
-                Text("Доверенный сертификат (SHA-256): " + pin.uppercase().chunked(2).take(8).joinToString(":") + "…",
+                Text(stringResource(com.assassins377.remoteplayer.R.string.pinned_cert, pin.uppercase().chunked(2).take(8).joinToString(":")),
                     style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { pin = ""; vm.resetTest() }) { Text("Забыть сертификат") }
-                Text("Изменение вступит в силу после «Сохранить».", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { pin = ""; vm.resetTest() }) { Text(stringResource(com.assassins377.remoteplayer.R.string.forget_cert)) }
+                Text(stringResource(com.assassins377.remoteplayer.R.string.applies_after_save), style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -172,10 +177,10 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
     if (confirmDelete && existing != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Удалить сервер?") },
+            title = { Text(stringResource(com.assassins377.remoteplayer.R.string.delete_server_q)) },
             text = { Text(existing.name) },
-            confirmButton = { TextButton(onClick = { vm.remove(existing.id); confirmDelete = false; onDone() }) { Text("Удалить") } },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Отмена") } },
+            confirmButton = { TextButton(onClick = { vm.remove(existing.id); confirmDelete = false; onDone() }) { Text(stringResource(com.assassins377.remoteplayer.R.string.delete)) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(com.assassins377.remoteplayer.R.string.cancel)) } },
         )
     }
 }
@@ -196,7 +201,7 @@ private fun SharePicker(
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it && state is SharesState.Loaded }) {
             OutlinedTextField(
                 share, onShare,
-                label = { Text("Общая папка (share)") },
+                label = { Text(stringResource(com.assassins377.remoteplayer.R.string.share_hint)) },
                 trailingIcon = { if (state is SharesState.Loaded) ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                 modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
             )
@@ -209,11 +214,11 @@ private fun SharePicker(
             }
         }
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(enabled = enabled && state != SharesState.Loading, onClick = onLoad) { Text("Найти папки на сервере") }
+            TextButton(enabled = enabled && state != SharesState.Loading, onClick = onLoad) { Text(stringResource(com.assassins377.remoteplayer.R.string.find_shares)) }
             when (state) {
                 SharesState.Loading -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                is SharesState.Loaded -> if (state.names.isEmpty()) Text("Папок не найдено — введите вручную")
-                is SharesState.Failed -> Text("Не удалось получить список: ${state.message}. Введите вручную.",
+                is SharesState.Loaded -> if (state.names.isEmpty()) Text(stringResource(com.assassins377.remoteplayer.R.string.no_shares))
+                is SharesState.Failed -> Text(stringResource(com.assassins377.remoteplayer.R.string.shares_failed, state.message),
                     color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 SharesState.Idle -> {}
             }

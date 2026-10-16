@@ -128,8 +128,8 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(msg)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = vm::retry) { Text("Повторить") }
-                        OutlinedButton(onClick = onBack) { Text("Назад") }
+                        Button(onClick = vm::retry) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.retry)) }
+                        OutlinedButton(onClick = onBack) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.back)) }
                     }
                 }
             }
@@ -174,7 +174,7 @@ private fun GestureLayer(
                         if (!s.doubleTapSeek) return@detectTapGestures
                         val fwd = o.x > size.width / 2
                         vm.seekBy(if (fwd) s.seekStepMs else -s.seekStepMs)
-                        onHint((if (fwd) "+" else "−") + "${s.seekStepSec} с")
+                        onHint((if (fwd) "+" else "−") + com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.seconds_short, "%d с", s.seekStepSec))
                     },
                 )
             }
@@ -206,7 +206,7 @@ private fun GestureLayer(
                         val cur = w.attributes.screenBrightness.takeIf { it >= 0 } ?: 0.5f
                         val v = (cur - dy / size.height).coerceIn(0.01f, 1f)
                         w.attributes = w.attributes.apply { screenBrightness = v }
-                        onHint("Яркость ${(v * 100).toInt()}%")
+                        onHint(com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.brightness_fmt, "Яркость %d%%", (v * 100).toInt()))
                     } else {
                         val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                         val steps = (acc * max * 1.5f).toInt()
@@ -214,7 +214,7 @@ private fun GestureLayer(
                             acc = 0f
                             val v = (audio.getStreamVolume(AudioManager.STREAM_MUSIC) + steps).coerceIn(0, max)
                             audio.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
-                            onHint("Громкость ${v * 100 / max}%")
+                            onHint(com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.volume_fmt, "Громкость %d%%", v * 100 / max))
                         }
                     }
                 }

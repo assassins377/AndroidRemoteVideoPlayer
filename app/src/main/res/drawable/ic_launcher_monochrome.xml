@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon (Android 13+) silhouette: single colour, play cut out of the screen. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#000000" android:fillType="evenOdd"
+        android:pathData="M30,36h48a4,4 0 0 1 4,4v28a4,4 0 0 1 -4,4H30a4,4 0 0 1 -4,-4V40a4,4 0 0 1 4,-4z M48,45L48,63L63,54Z"/>
+    <path android:fillColor="#000000" android:pathData="M44,76h20v3H44z"/>
+    <path android:strokeColor="#000000" android:strokeWidth="2.5" android:strokeLineCap="round" android:pathData="M47,30a10,10 0 0 1 14,0"/>
+    <path android:strokeColor="#000000" android:strokeWidth="2.5" android:strokeLineCap="round" android:pathData="M43,26a16,16 0 0 1 22,0"/>
+</vector>

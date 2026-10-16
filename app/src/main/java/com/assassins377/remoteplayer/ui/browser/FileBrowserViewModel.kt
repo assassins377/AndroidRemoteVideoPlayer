@@ -26,15 +26,15 @@ class FileBrowserViewModel : ViewModel() {
     val state: StateFlow<BrowserState> = _state.asStateFlow()
     private var serverId: String = ""
 
-    fun init(id: String) {
+    fun init(id: String, startPath: String = "") {
         if (serverId == id) return
         serverId = id
-        open("")
+        open(startPath)
     }
 
     fun open(path: String) {
         val server = ServerStore.get(serverId) ?: run {
-            _state.value = BrowserState(error = "Сервер не найден"); return
+            _state.value = BrowserState(error = com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.err_server_missing, "Сервер не найден")); return
         }
         _state.value = _state.value.copy(path = path, loading = true, error = null)
         viewModelScope.launch {

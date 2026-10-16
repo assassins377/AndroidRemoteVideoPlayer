@@ -8,6 +8,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -87,12 +89,22 @@ fun Poster(f: RemoteFile, m: TmdbMeta?, modifier: Modifier) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FileRow(f: RemoteFile, s: AppSettings, serverId: String, onClick: () -> Unit, onDetails: (RemoteFile, ParsedTitle?, TmdbMeta?) -> Unit) {
+fun FileRow(
+    f: RemoteFile, s: AppSettings, serverId: String, onClick: () -> Unit, onDetails: (RemoteFile, ParsedTitle?, TmdbMeta?) -> Unit,
+    starred: Boolean = false, onStar: (() -> Unit)? = null,
+) {
     val (p, m) = rememberMeta(f, s, serverId)
     ListItem(
         leadingContent = { Poster(f, m, Modifier.width(40.dp).height(60.dp)) },
         headlineContent = { Text(headline(f, p, m), maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = subline(f, p)?.let { { Text(it) } },
+        trailingContent = onStar?.let { star -> {
+            IconButton(onClick = star) {
+                Icon(if (starred) Icons.Default.Star else Icons.Default.StarBorder,
+                    stringResource(if (starred) R.string.remove_favorite else R.string.add_favorite),
+                    tint = if (starred) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+            }
+        } },
         modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = { if (p != null) onDetails(f, p, m) }),
     )
 }

@@ -101,10 +101,10 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
                 var h: Throwable? = error
                 while (h != null && h !is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) h = h.cause
                 val cert = com.assassins377.remoteplayer.data.CertInfo.from(error)
-                _error.value = cert?.let { com.assassins377.remoteplayer.data.HttpErrors.wrap(error).kind.message + ". Откройте папку заново, чтобы проверить сертификат." }
+                _error.value = cert?.let { com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.err_cert_reopen, "%s. Откройте папку заново, чтобы проверить сертификат.", com.assassins377.remoteplayer.data.HttpErrors.wrap(error).kind.message) }
                     ?: (c as? SmbError)?.message
                     ?: (h as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.let { com.assassins377.remoteplayer.data.HttpErrors.forCode(it.responseCode).message }
-                    ?: "Ошибка воспроизведения: ${error.errorCodeName}"
+                    ?: com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.err_playback, "Ошибка воспроизведения: %s", error.errorCodeName)
             }
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_ENDED) {

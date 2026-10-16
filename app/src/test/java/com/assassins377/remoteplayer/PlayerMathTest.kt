@@ -28,10 +28,10 @@ class PlayerMathTest {
     }
 
     @Test fun trackLabels() {
-        assertEquals("Русский · Дубляж · 5.1", TrackOptions.labelOf("Дубляж", "ru", 6, "audio/ac3", 1))
-        assertEquals("Английский · SRT", TrackOptions.labelOf(null, "en", -1, "application/x-subrip", 1))
-        assertEquals("Дорожка 3", TrackOptions.labelOf(null, "und", -1, null, 3))
-        assertEquals("Японский · стерео", TrackOptions.labelOf("", "ja", 2, null, 1))
+        assertEquals("Русский · Дубляж · 5.1", TrackOptions.labelOf("Дубляж", "ru", 6, "audio/ac3", 1, java.util.Locale("ru")))
+        assertEquals("Английский · SRT", TrackOptions.labelOf(null, "en", -1, "application/x-subrip", 1, java.util.Locale("ru")))
+        assertEquals("Дорожка 3", TrackOptions.labelOf(null, "und", -1, null, 3, java.util.Locale("ru")))
+        assertEquals("Японский · стерео", TrackOptions.labelOf("", "ja", 2, null, 1, java.util.Locale("ru")))
     }
 
     @Test fun newSettingsMapping() {
