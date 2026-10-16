@@ -64,9 +64,11 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
     val total by remember(query, filter, live, mode) { dao.observeCount(LibrarySql.count(query, filter, live, mode)) }.collectAsStateWithLifecycle(initialValue = 0)
     val listState = rememberLazyListState()
     val favs by com.assassins377.remoteplayer.settings.FavoritesStore.items.collectAsStateWithLifecycle()
-    var details by remember { mutableStateOf<Triple<String, com.assassins377.remoteplayer.data.RemoteFile, Pair<com.assassins377.remoteplayer.meta.ParsedTitle?, com.assassins377.remoteplayer.meta.TmdbMeta?>>?>(null) }
-    details?.let { (sid, f, pm) ->
-        com.assassins377.remoteplayer.ui.browser.DetailsSheet(sid, f, pm.first, pm.second,
+    // Only the selection is kept; metadata is derived reactively so a lookup finishing later fills the sheet.
+    var details by remember { mutableStateOf<Pair<String, com.assassins377.remoteplayer.data.RemoteFile>?>(null) }
+    details?.let { (sid, f) ->
+        val (dp, dm) = com.assassins377.remoteplayer.ui.browser.rememberMeta(f, settings, sid)
+        com.assassins377.remoteplayer.ui.browser.DetailsSheet(sid, f, dp, dm,
             onPlay = { details = null; ServerStore.get(sid)?.let { srv -> onPlay(ServerStore.repositoryFor(srv.type).playbackUri(srv, f)) } },
             onDismiss = { details = null })
     }
@@ -177,7 +179,7 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
                             },
                             modifier = Modifier.combinedClickable(
                                 onClick = { if (query.isNotBlank()) RecentSearches.add(query); onPlay(ServerStore.repositoryFor(server.type).playbackUri(server, f)) },
-                                onLongClick = { details = Triple(e.serverId, f, p to m) },
+                                onLongClick = { details = e.serverId to f },
                             ),
                         )
                     }
