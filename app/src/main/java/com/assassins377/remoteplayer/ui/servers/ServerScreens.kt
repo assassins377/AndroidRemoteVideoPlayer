@@ -132,7 +132,7 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
                     onLoad = { vm.loadShares(current().copy(id = "__shares__")) },
                 )
             }
-            if (type != ServerType.HTTP) {
+            run { // Basic/Digest for HTTP and WebDAV, NTLM for SMB
                 OutlinedTextField(user, { user = it; vm.resetTest() }, label = { Text("Пользователь (пусто = гость)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
                     pass, { pass = it; vm.resetTest() }, label = { Text("Пароль") },

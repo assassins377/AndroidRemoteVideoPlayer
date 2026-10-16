@@ -19,7 +19,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.assassins377.remoteplayer.data.RemoteFile
 import com.assassins377.remoteplayer.data.ServerStore
 import com.assassins377.remoteplayer.data.SmbError
-import com.assassins377.remoteplayer.data.SmbRepository
+import com.assassins377.remoteplayer.data.PlaybackRef
 import com.assassins377.remoteplayer.data.SmbUri
 import com.assassins377.remoteplayer.player.RoutingDataSourceFactory
 import com.assassins377.remoteplayer.settings.AppSettings
@@ -85,7 +85,11 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             override fun onPlayerError(error: PlaybackException) {
                 var c: Throwable? = error
                 while (c != null && c !is SmbError) c = c.cause
-                _error.value = (c as? SmbError)?.message ?: "Ошибка воспроизведения: ${error.errorCodeName}"
+                var h: Throwable? = error
+                while (h != null && h !is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) h = h.cause
+                _error.value = (c as? SmbError)?.message
+                    ?: (h as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.let { com.assassins377.remoteplayer.data.HttpErrors.forCode(it.responseCode).message }
+                    ?: "Ошибка воспроизведения: ${error.errorCodeName}"
             }
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_ENDED) {
@@ -111,9 +115,9 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             val folder = folderListing(uri)
             val item = MediaItem.Builder().setUri(uri)
             if (settings.autoLoadSubtitles && folder != null) {
-                val (serverId, path) = SmbUri.parse(uri)!!
-                val subs = SubtitleMatcher.find(path.substringAfterLast('/'), folder).map { m ->
-                    MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(SmbUri.build(serverId, m.file.path)))
+                val ref = PlaybackRef.parse(uri)!!
+                val subs = SubtitleMatcher.find(ref.path.substringAfterLast('/'), folder).map { m ->
+                    MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(ref.withPath(m.file.path)))
                         .setMimeType(m.mimeType)
                         .setLanguage(m.language)
                         .setLabel(m.file.name)
@@ -132,20 +136,21 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** SMB only: lists the video's folder (for sidecar subtitles and next-video). */
+    /** SMB/WebDAV/HTTP-autoindex: lists the video's folder (for sidecar subtitles and next-video). */
     private suspend fun folderListing(uri: String): List<RemoteFile>? {
-        val (serverId, path) = SmbUri.parse(uri) ?: return null
-        val server = ServerStore.get(serverId) ?: return null
-        return runCatching { SmbRepository().list(server, path.substringBeforeLast('/', "")) }.getOrNull()
+        val ref = PlaybackRef.parse(uri) ?: return null
+        val server = ServerStore.get(ref.serverId) ?: return null
+        if (ref.path.isEmpty()) return null // direct HTTP link, no folder
+        return runCatching { ServerStore.repositoryFor(server.type).list(server, ref.path.substringBeforeLast('/', "")) }.getOrNull()
     }
 
     private fun playNext() {
         val uri = currentUri ?: return
-        val (serverId, path) = SmbUri.parse(uri) ?: return
+        val ref = PlaybackRef.parse(uri) ?: return
         viewModelScope.launch {
             val folder = folderListing(uri) ?: return@launch
-            val next = FileSorter.nextVideo(folder, path.substringAfterLast('/')) ?: return@launch
-            play(SmbUri.build(serverId, next.path))
+            val next = FileSorter.nextVideo(folder, ref.path.substringAfterLast('/')) ?: return@launch
+            play(ref.withPath(next.path))
         }
     }
 
