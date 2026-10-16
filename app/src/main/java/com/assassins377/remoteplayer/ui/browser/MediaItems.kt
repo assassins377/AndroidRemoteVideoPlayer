@@ -167,6 +167,17 @@ fun DetailsSheet(serverId: String, f: RemoteFile, p: ParsedTitle?, m: TmdbMeta?,
             DetailsExtra(details, meta?.overview.orEmpty())
             Text(stringResource(R.string.file_name) + ": " + f.name, style = MaterialTheme.typography.bodySmall)
             if (!f.isDirectory) Button(onClick = onPlay, modifier = Modifier.fillMaxWidth()) { Text("▶") }
+            if (f.isVideo) {
+                val srv = remember(serverId) { com.assassins377.remoteplayer.data.ServerStore.get(serverId) }
+                val dls by com.assassins377.remoteplayer.download.DownloadStore.items.collectAsState()
+                if (srv != null) {
+                    val pu = remember(srv, f.path) { com.assassins377.remoteplayer.data.ServerStore.repositoryFor(srv.type).playbackUri(srv, f) }
+                    val have = dls.any { it.uri == pu }
+                    OutlinedButton(enabled = !have, onClick = { com.assassins377.remoteplayer.download.DownloadStore.enqueue(pu, f.name) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(if (have) R.string.download_added else R.string.download))
+                    }
+                }
+            }
             if (p != null) {
                 OutlinedButton(onClick = { searching = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tmdb_wrong_match)) }
                 if (ov != null) TextButton(onClick = { TmdbRepository.setOverride(key, null) }, modifier = Modifier.fillMaxWidth()) {

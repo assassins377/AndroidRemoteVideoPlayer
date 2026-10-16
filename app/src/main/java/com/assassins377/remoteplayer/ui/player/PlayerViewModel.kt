@@ -151,7 +151,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         currentUri = uri
         viewModelScope.launch {
             val folder = folderListing(uri)
-            val item = MediaItem.Builder().setUri(uri)
+            val local = com.assassins377.remoteplayer.download.DownloadStore.localFile(uri)
+            val item = MediaItem.Builder().setUri(local?.let { android.net.Uri.fromFile(it) } ?: android.net.Uri.parse(uri))
             if (settings.autoLoadSubtitles && folder != null) {
                 val ref = PlaybackRef.parse(uri)!!
                 val delayMs = subtitleDelay(uri)

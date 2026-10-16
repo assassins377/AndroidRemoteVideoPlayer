@@ -210,4 +210,13 @@
     <string name="cast_none">No devices found. The TV/Chromecast must be on the same Wi-Fi network.</string>
     <string name="casting_to_fmt">Playing on: %1$s</string>
     <string name="cast_stop">Stop</string>
+    <string name="downloads">Downloads</string>
+    <string name="downloads_storage_fmt">Used by downloads: %1$s · free: %2$s</string>
+    <string name="downloads_empty">No downloads. Long-press a video → “Download to device”.</string>
+    <string name="download_failed">Download failed</string>
+    <string name="download_waiting">Waiting for network…</string>
+    <string name="download_delete">Delete</string>
+    <string name="download_delete_q">Delete the downloaded file from this device?</string>
+    <string name="download">Download to device</string>
+    <string name="download_added">Added to downloads</string>
 </resources>

@@ -21,6 +21,7 @@ object Routes {
     const val BROWSER = "browser/{serverId}?path={path}"
     const val FAVORITES = "favorites"
     const val LIBRARY = "library"
+    const val DOWNLOADS = "downloads"
     const val SERIES = "library/series/{key}"
     fun series(key: String) = "library/series/${Uri.encode(key)}"
     const val PLAYER = "player?uri={uri}"
@@ -40,6 +41,7 @@ fun AppNavGraph() {
                 onSettings = { nav.navigate(Routes.SETTINGS) },
                 onFavorites = { nav.navigate(Routes.FAVORITES) },
                 onLibrary = { nav.navigate(Routes.LIBRARY) },
+                onDownloads = { nav.navigate(Routes.DOWNLOADS) },
                 onPlay = { uri -> nav.navigate(Routes.player(uri)) },
             )
         }
@@ -63,6 +65,9 @@ fun AppNavGraph() {
                 onPlay = { uri -> nav.navigate(Routes.player(uri)) },
                 onBack = { nav.popBackStack() },
             )
+        }
+        composable(Routes.DOWNLOADS) {
+            com.assassins377.remoteplayer.download.DownloadsScreen(onPlay = { uri -> nav.navigate(Routes.player(uri)) }, onBack = { nav.popBackStack() })
         }
         composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }) }
         composable(

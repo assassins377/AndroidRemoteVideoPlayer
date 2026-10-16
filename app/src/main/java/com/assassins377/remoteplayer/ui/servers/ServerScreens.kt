@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -35,6 +36,7 @@ fun ServerListScreen(
     onSettings: () -> Unit = {},
     onFavorites: () -> Unit = {},
     onLibrary: () -> Unit = {},
+    onDownloads: () -> Unit = {},
     onPlay: (String) -> Unit = {},
     vm: ServersViewModel = viewModel(),
 ) {
@@ -45,6 +47,7 @@ fun ServerListScreen(
                 title = { Text(stringResource(com.assassins377.remoteplayer.R.string.servers)) },
                 actions = {
                     IconButton(onClick = onLibrary) { Icon(Icons.Default.VideoLibrary, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.library)) }
+                    IconButton(onClick = onDownloads) { Icon(Icons.Default.Download, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.downloads)) }
                     IconButton(onClick = onFavorites) { Icon(Icons.Default.Star, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.favorites)) }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(com.assassins377.remoteplayer.R.string.settings))
