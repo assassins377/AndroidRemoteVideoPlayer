@@ -17,6 +17,13 @@ android {
         versionName = "0.4.1"
     }
     buildTypes {
+        create("debugMin") {
+            initWith(getByName("debug"))
+            isMinifyEnabled = true
+            isShrinkResources = true
+            matchingFallbacks += "debug"
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro", "proguard-debugmin.pro")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -56,6 +63,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.okhttp)
     implementation(libs.media3.datasource.okhttp)
+    implementation(libs.media3.session)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

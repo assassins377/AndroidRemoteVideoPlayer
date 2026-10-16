@@ -8,8 +8,11 @@ import android.media.AudioManager
 import android.util.TypedValue
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,7 +33,12 @@ import com.assassins377.remoteplayer.settings.AppSettings
 import kotlinx.coroutines.delay
 
 /** Lets MainActivity know a video is on screen (for PiP on minimize). */
-object PipState { @Volatile var playing = false }
+object PipState {
+    @Volatile var playing = false
+    @Volatile var aspect: Pair<Int, Int> = 16 to 9
+    /** Compose-observable: true while the activity is in picture-in-picture. */
+    val inPip = androidx.compose.runtime.mutableStateOf(false)
+}
 
 private fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -43,9 +51,36 @@ private fun Context.findActivity(): Activity? = when (this) {
 fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewModel()) {
     val s = vm.settings
     LaunchedEffect(uri) { vm.play(uri) }
-    LifecycleStartEffect(vm) { onStopOrDispose { vm.savePosition(); vm.player.pause() } }
+    var playerView by remember { mutableStateOf<PlayerView?>(null) }
     val ctx = LocalContext.current
     val activity = remember(ctx) { ctx.findActivity() }
+    val inPip by PipState.inPip
+    val videoSize by vm.videoSize.collectAsStateWithLifecycle()
+    val tracks by vm.tracks.collectAsStateWithLifecycle()
+    var showTracks by remember { mutableStateOf(false) }
+    // True fullscreen: hide status/navigation bars; swipe from edge shows them temporarily.
+    DisposableEffect(activity) {
+        val w = activity?.window
+        val c = w?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView) }
+        c?.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        c?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        w?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            c?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            w?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+    // PiP: correct aspect ratio; auto-enter on Android 12+ when enabled.
+    LaunchedEffect(videoSize, s.pipOnMinimize) {
+        PipState.aspect = PlayerMath.pipAspect(videoSize.first, videoSize.second)
+        if (android.os.Build.VERSION.SDK_INT >= 31 && activity != null) runCatching {
+            activity.setPictureInPictureParams(android.app.PictureInPictureParams.Builder()
+                .setAspectRatio(PlayerMath.rational(PipState.aspect)).setAutoEnterEnabled(s.pipOnMinimize).build())
+        }
+    }
+    LaunchedEffect(inPip) { if (inPip) playerView?.hideController() }
+    // Background audio: keep playing when the app is minimized (MediaSession notification stays); otherwise pause.
+    LifecycleStartEffect(vm) { onStopOrDispose { vm.savePosition(); if (!s.backgroundAudio || activity?.isFinishing == true) vm.player.pause() } }
     DisposableEffect(s.lockRotation) {
         PipState.playing = true
         val prev = activity?.requestedOrientation
@@ -58,7 +93,6 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
     val speed by vm.speed.collectAsStateWithLifecycle()
     var menu by remember { mutableStateOf(false) }
     val error by vm.error.collectAsStateWithLifecycle()
-    var playerView by remember { mutableStateOf<PlayerView?>(null) }
     var hint by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(hint) { if (hint != null) { delay(900); hint = null } }
 
@@ -67,7 +101,8 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
             factory = { c ->
                 PlayerView(c).apply {
                     player = vm.player
-                    setShowSubtitleButton(true)
+                    setShowSubtitleButton(false) // replaced by our own track dialog
+                    keepScreenOn = true
                     subtitleView?.apply {
                         setStyle(subtitleStyle(s))
                         setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, s.subtitleSizeSp.toFloat())
@@ -79,7 +114,7 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
             modifier = Modifier.fillMaxSize(),
         )
         // Gesture layer over the video area; leaves top/bottom strips free for the controller buttons and seek bar.
-        if (s.swipeGestures || s.doubleTapSeek) {
+        if (!inPip && (s.swipeGestures || s.doubleTapSeek || s.horizontalSeek)) {
             GestureLayer(s, vm, playerView, activity, onHint = { hint = it },
                 modifier = Modifier.fillMaxWidth().fillMaxHeight(0.7f).align(Alignment.Center))
         }
@@ -99,14 +134,20 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
                 }
             }
         }
-        Box(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+        if (!inPip) Row(Modifier.align(Alignment.TopEnd).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          if (tracks.audio.size > 1 || tracks.text.isNotEmpty()) FilledTonalButton(onClick = { showTracks = true }) {
+              Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.tracks))
+          }
+          Box {
             FilledTonalButton(onClick = { menu = true }) { Text("${speed}x") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 AppSettings.SPEEDS.forEach { sp ->
                     DropdownMenuItem(text = { Text("${sp}x") }, onClick = { vm.setSpeed(sp); menu = false })
                 }
             }
+          }
         }
+        if (showTracks) TrackDialog(tracks, onSelect = vm::selectTrack, onDismiss = { showTracks = false })
     }
 }
 
@@ -138,6 +179,21 @@ private fun GestureLayer(
                 )
             }
             .pointerInput(s) {
+                if (!s.horizontalSeek) return@pointerInput
+                var start = 0L; var drag = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { start = vm.player.currentPosition; drag = 0f },
+                    onDragEnd = {
+                        vm.player.seekTo(PlayerMath.swipeTarget(start, drag, size.width.toFloat(), vm.player.duration.coerceAtLeast(0)))
+                    },
+                ) { change, dx ->
+                    change.consume(); drag += dx
+                    val target = PlayerMath.swipeTarget(start, drag, size.width.toFloat(), vm.player.duration.coerceAtLeast(0))
+                    onHint(PlayerMath.formatDelta(target - start) + "  →  " + PlayerMath.formatTime(target) +
+                        (vm.player.duration.takeIf { it > 0 }?.let { " / " + PlayerMath.formatTime(it) } ?: ""))
+                }
+            }
+            .pointerInput(s) {
                 if (!s.swipeGestures) return@pointerInput
                 var left = false
                 var acc = 0f
@@ -164,4 +220,33 @@ private fun GestureLayer(
                 }
             },
     )
+}
+
+@Composable
+private fun TrackDialog(t: TrackOptions, onSelect: (Int, TrackOption?) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.close)) } },
+        title = { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.tracks)) },
+        text = {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                if (t.audio.isNotEmpty()) {
+                    Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.audio_tracks), style = MaterialTheme.typography.titleSmall)
+                    t.audio.forEach { o -> TrackRow(o.label, o.selected) { onSelect(androidx.media3.common.C.TRACK_TYPE_AUDIO, o) } }
+                }
+                Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.subtitle_tracks), style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 12.dp))
+                TrackRow(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.subs_off), t.textOff) { onSelect(androidx.media3.common.C.TRACK_TYPE_TEXT, null) }
+                t.text.forEach { o -> TrackRow(o.label, o.selected) { onSelect(androidx.media3.common.C.TRACK_TYPE_TEXT, o) } }
+            }
+        },
+    )
+}
+
+@Composable
+private fun TrackRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(label)
+    }
 }

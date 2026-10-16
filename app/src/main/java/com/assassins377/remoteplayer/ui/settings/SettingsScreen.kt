@@ -120,6 +120,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             Toggle(R.string.double_tap, s.doubleTapSeek) { set("doubleTapSeek", it) }
             Toggle(R.string.pip, s.pipOnMinimize) { set("pipOnMinimize", it) }
             Toggle(R.string.lock_rotation, s.lockRotation) { set("lockRotation", it) }
+            Toggle(R.string.horizontal_seek, s.horizontalSeek) { set("horizontalSeek", it) }
+            Toggle(R.string.background_audio, s.backgroundAudio) { set("backgroundAudio", it) }
 
             Section(R.string.sec_tmdb)
             Toggle(R.string.tmdb_enabled, s.tmdbEnabled) { set("tmdbEnabled", it); TmdbRepository.resetAuth() }

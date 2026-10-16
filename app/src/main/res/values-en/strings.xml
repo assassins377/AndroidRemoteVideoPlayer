@@ -85,4 +85,11 @@
     <string name="tmdb_tv">TV series</string>
     <string name="tmdb_search">Search</string>
     <string name="tmdb_no_results">No results</string>
+    <string name="horizontal_seek">Horizontal swipe to seek</string>
+    <string name="background_audio">Background audio when minimized</string>
+    <string name="tracks">Tracks</string>
+    <string name="audio_tracks">Audio</string>
+    <string name="subtitle_tracks">Subtitles</string>
+    <string name="subs_off">Off</string>
+    <string name="close">Close</string>
 </resources>

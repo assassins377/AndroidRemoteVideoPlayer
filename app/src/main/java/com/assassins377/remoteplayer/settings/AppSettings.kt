@@ -41,6 +41,8 @@ data class AppSettings(
     val doubleTapSeek: Boolean = true,
     val pipOnMinimize: Boolean = false,
     val lockRotation: Boolean = false,
+    val backgroundAudio: Boolean = false,
+    val horizontalSeek: Boolean = true,
     // TMDB
     val tmdbEnabled: Boolean = false,
     /** Keystore-encrypted API key/token (see TmdbRepository). */
@@ -93,6 +95,8 @@ data class AppSettings(
                 doubleTapSeek = b("doubleTapSeek", d.doubleTapSeek),
                 pipOnMinimize = b("pipOnMinimize", d.pipOnMinimize),
                 lockRotation = b("lockRotation", d.lockRotation),
+                backgroundAudio = b("backgroundAudio", d.backgroundAudio),
+                horizontalSeek = b("horizontalSeek", d.horizontalSeek),
                 tmdbEnabled = b("tmdbEnabled", d.tmdbEnabled),
                 tmdbKeyEnc = s("tmdbKeyEnc", d.tmdbKeyEnc),
             )
