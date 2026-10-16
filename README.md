@@ -4,6 +4,9 @@
 
 **EN:** Android player for videos on your PC or NAS over the home network: SMB (Windows, Samba, Synology/QNAP), WebDAV, HTTP. Media3 player with gestures, track selection, PiP and background audio, external subtitles, TMDB posters, favourites, Continue watching, a combined library with search across all servers.
 
+## ✨ Новое / What's new
+
+- Сериалы: сезоны/серии, отметки «просмотрено», следующая серия с отсчётом / Series grouping, watched marks, up-next countdown
 ## 📥 Скачать / Download
 
 Последний APK — на странице **[Releases](https://github.com/assassins377/AndroidRemoteVideoPlayer/releases)** (Android 8.0+).

@@ -147,6 +147,19 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
             }
           }
         }
+        val upNext by vm.upNext.collectAsStateWithLifecycle()
+        upNext?.let { u ->
+            Card(Modifier.align(Alignment.BottomEnd).padding(24.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.up_next_fmt, u.secondsLeft))
+                    Text(u.title, style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = vm::playUpNextNow) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.up_next_play)) }
+                        OutlinedButton(onClick = vm::cancelUpNext) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.cancel)) }
+                    }
+                }
+            }
+        }
         if (showTracks) TrackDialog(tracks, onSelect = vm::selectTrack, onDismiss = { showTracks = false })
     }
 }

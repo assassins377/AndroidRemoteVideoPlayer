@@ -187,4 +187,14 @@
     <string name="library_server_progress_fmt">%1$s: папок %2$d, видео %3$d</string>
     <string name="library_total_fmt">Найдено: %1$d</string>
     <string name="library_updated_fmt">Обновлено %1$s</string>
+    <string name="library_mode_all">Всё</string>
+    <string name="library_mode_movies">Фильмы</string>
+    <string name="library_mode_series">Сериалы</string>
+    <string name="series_counts_fmt">Сезонов: %1$d · серий: %2$d</string>
+    <string name="season_fmt">Сезон %1$d</string>
+    <string name="episode_fmt">Серия %1$d</string>
+    <string name="mark_watched">Отметить просмотренным</string>
+    <string name="mark_unwatched">Снять отметку «просмотрено»</string>
+    <string name="up_next_fmt">Следующая серия через %1$d с</string>
+    <string name="up_next_play">Смотреть сейчас</string>
 </resources>
