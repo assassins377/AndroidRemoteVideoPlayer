@@ -80,7 +80,8 @@ fun Poster(f: RemoteFile, m: TmdbMeta?, modifier: Modifier, serverId: String? = 
         if (serverId == null || !f.isVideo) null
         else com.assassins377.remoteplayer.data.ServerStore.get(serverId)?.let { srv -> com.assassins377.remoteplayer.data.ServerStore.repositoryFor(srv.type).playbackUri(srv, f) }
     }
-    val thumb by produceState(thumbUri?.let { com.assassins377.remoteplayer.player.Thumbnails.cached(it) }, thumbUri, m, s.videoThumbnails) {
+    val thumbState by produceState(thumbUri?.let { com.assassins377.remoteplayer.player.Thumbnails.cached(it) }, thumbUri, m, s.videoThumbnails) {
+        if (!s.videoThumbnails) { value = null; return@produceState }
         if (value == null && m?.posterPath == null && thumbUri != null && s.videoThumbnails) {
             delay(600) // only for items that stay on screen
             value = com.assassins377.remoteplayer.player.Thumbnails.get(thumbUri)
@@ -91,6 +92,7 @@ fun Poster(f: RemoteFile, m: TmdbMeta?, modifier: Modifier, serverId: String? = 
             Icon(if (f.isDirectory) Icons.Default.Folder else Icons.Default.Movie, null, Modifier.fillMaxSize(0.6f))
         }
     }
+    val thumb = thumbState.takeIf { s.videoThumbnails }
     val url = m?.posterUrl() ?: thumb
     if (url == null) fallback() else SubcomposeAsyncImage(
         model = url, contentDescription = null, contentScale = ContentScale.Crop,
