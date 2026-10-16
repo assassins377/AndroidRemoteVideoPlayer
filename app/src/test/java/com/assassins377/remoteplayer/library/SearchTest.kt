@@ -12,7 +12,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = TestApp::class)
 class SearchTest {
     @Test fun matchSyntax() {
-        assertEquals("\"звездные войны*\" 1977*", LibrarySql.match("\"Звёздные войны\" 1977"))
+        assertEquals("\"звездные войны\" 1977*", LibrarySql.match("\"Звёздные войны\" 1977"))
         assertEquals("a* b*", LibrarySql.match("a \" b"))
     }
 
@@ -26,6 +26,9 @@ class SearchTest {
         assertEquals(listOf("Breaking Bad"), dao.strings(LibrarySql.suggestions("break", live)!!)) // grouped by series
         assertEquals(listOf("Star Wars (1977)", "Wars of the Stars (2001)"), dao.strings(LibrarySql.suggestions("sta", live)!!))
         assertNull(LibrarySql.suggestions("  ", live))
+        assertEquals(0, n("\"star war\"")) // quoted = exact words, no prefix
+        assertEquals(emptyList<String>(), dao.strings(LibrarySql.suggestions("break", live, mode = LibraryMode.MOVIES)!!))
+        assertEquals(emptyList<String>(), dao.strings(LibrarySql.suggestions("break", live, servers = listOf("zzz"))!!))
         db.close()
     }
 
