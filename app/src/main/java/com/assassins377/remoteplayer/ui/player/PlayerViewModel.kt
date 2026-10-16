@@ -270,6 +270,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { delay(300); if (player.currentPosition < pos) player.seekTo(pos); player.playWhenReady = wasPlaying }
     }
 
+    val currentPlaybackUri: String? get() = currentUri
+
     fun setSpeed(value: Float) {
         _speed.value = value
         player.setPlaybackSpeed(value)

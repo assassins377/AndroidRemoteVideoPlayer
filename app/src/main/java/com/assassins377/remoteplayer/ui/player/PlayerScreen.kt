@@ -61,6 +61,7 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
     val videoSize by vm.videoSize.collectAsStateWithLifecycle()
     val tracks by vm.tracks.collectAsStateWithLifecycle()
     var showTracks by remember { mutableStateOf(false) }
+    var showCast by remember { mutableStateOf(false) }
     // True fullscreen: hide status/navigation bars; swipe from edge shows them temporarily.
     DisposableEffect(activity) {
         val w = activity?.window
@@ -152,6 +153,7 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
             }
         }
         if (!inPip) Row(Modifier.align(Alignment.TopEnd).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          FilledTonalButton(onClick = { showCast = true }) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.cast_button)) }
           if (tracks.audio.size > 1 || tracks.text.isNotEmpty()) FilledTonalButton(onClick = { showTracks = true }) {
               Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.tracks))
           }
@@ -163,6 +165,25 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
                 }
             }
           }
+        }
+        val castState by com.assassins377.remoteplayer.cast.Casting.state.collectAsStateWithLifecycle()
+        if (showCast) CastDialog(castState,
+            onOpen = { com.assassins377.remoteplayer.cast.Casting.startDiscovery(ctx) },
+            onPick = { t ->
+                val u = vm.currentPlaybackUri ?: uri
+                val name = com.assassins377.remoteplayer.data.PlaybackRef.parse(u)?.path?.substringAfterLast('/') ?: "video.mp4"
+                com.assassins377.remoteplayer.cast.Casting.cast(ctx, t, u, name, com.assassins377.remoteplayer.meta.TitleParser.parse(name).display, vm.player.currentPosition)
+                vm.player.pause(); showCast = false
+            },
+            onDismiss = { com.assassins377.remoteplayer.cast.Casting.stopDiscovery(ctx); showCast = false })
+        castState.activeName?.let { name ->
+            Card(Modifier.align(Alignment.TopStart).padding(16.dp)) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.casting_to_fmt, name))
+                    TextButton(onClick = { com.assassins377.remoteplayer.cast.Casting.togglePause() }) { Text("⏯") }
+                    TextButton(onClick = { com.assassins377.remoteplayer.cast.Casting.stop(ctx) }) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.cast_stop)) }
+                }
+            }
         }
         val upNext by vm.upNext.collectAsStateWithLifecycle()
         upNext?.let { u ->
@@ -293,4 +314,25 @@ private fun TrackRow(label: String, selected: Boolean, onClick: () -> Unit) {
         RadioButton(selected = selected, onClick = onClick)
         Text(label)
     }
+}
+
+@Composable
+private fun CastDialog(st: com.assassins377.remoteplayer.cast.CastState, onOpen: () -> Unit, onPick: (com.assassins377.remoteplayer.cast.CastTarget) -> Unit, onDismiss: () -> Unit) {
+    LaunchedEffect(Unit) { onOpen() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.close)) } },
+        title = { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.cast_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (st.searching) LinearProgressIndicator(Modifier.fillMaxWidth())
+                st.devices.forEach { d ->
+                    val kind = if (d is com.assassins377.remoteplayer.cast.CastTarget.Chromecast) "Chromecast" else "DLNA"
+                    ListItem(headlineContent = { Text(d.name) }, supportingContent = { Text(kind) }, modifier = Modifier.clickable { onPick(d) })
+                }
+                if (!st.searching && st.devices.isEmpty()) Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.cast_none))
+                st.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+    )
 }

@@ -205,4 +205,9 @@
     <string name="seasons_fmt">%1$d seasons</string>
     <string name="cast">Cast</string>
     <string name="trailer">▶ Trailer (YouTube)</string>
+    <string name="cast_button">Cast</string>
+    <string name="cast_title">Play on device</string>
+    <string name="cast_none">No devices found. The TV/Chromecast must be on the same Wi-Fi network.</string>
+    <string name="casting_to_fmt">Playing on: %1$s</string>
+    <string name="cast_stop">Stop</string>
 </resources>
