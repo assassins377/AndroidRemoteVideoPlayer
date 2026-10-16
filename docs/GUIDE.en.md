@@ -49,7 +49,7 @@ Tap **+**. The **New server** screen opens. Select the **SMB** type at the top a
 | Field | What to enter |
 |---|---|
 | **Name** | Any label, e.g. "Living-room NAS" |
-| **Host (192.168.1.10)** | IP address or network name of the PC/NAS, without `smb://` or slashes. The standard port 445 is used |
+| **Host (192.168.1.10)** | IP address or network name of the PC/NAS, without `smb://` or slashes. Default port 445; another one after a colon: `nas:4455` |
 | **Shared folder (share)** | Share name, e.g. `video`. Required |
 | **User (empty = guest)** | Server account. Leave it empty for guest access |
 | **Password** | The account password |
@@ -343,6 +343,11 @@ In library search all words must match, by prefix (`star war 1977`). A quoted ph
 
 ### Favourites and title fixes in the Library
 Each video in **Library** has a star (**Add to favourites**). A long press opens the film card: overview, cast, trailer, **Download to device**, and **Wrong film?** — pick the correct TMDB entry or show without TMDB. The fix applies in folders and in the library.
+
+### SMB port, audio after Back, widget
+- **Custom SMB port**: put the port after a colon in "Host": `192.168.1.10:4455` (IPv6: `[fe80::1]:445`). Default is 445.
+- **Background audio after Back**: with **Settings → Controls → Background audio** on, leaving the player with Back no longer stops the video — audio continues with notification controls. The position is saved every 10 s. Opening another video or stopping from the notification ends background playback. Autoplay of the next episode doesn't work in the background.
+- **Widget**: long-press the home screen → Widgets → Remote Video Player → "Continue watching". Shows up to three unfinished videos with progress; tap to resume in the player.
 
 ## 11. Export and import servers
 

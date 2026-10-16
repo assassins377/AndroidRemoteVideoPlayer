@@ -220,4 +220,6 @@
     <string name="download">Download to device</string>
     <string name="download_added">Added to downloads</string>
     <string name="clear">Clear</string>
+    <string name="host_smb_port_hint">Custom port: after a colon, e.g. 192.168.1.10:4455</string>
+    <string name="widget_empty">Nothing to continue</string>
 </resources>

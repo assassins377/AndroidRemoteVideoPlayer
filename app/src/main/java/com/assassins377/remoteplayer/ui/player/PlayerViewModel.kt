@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 @OptIn(UnstableApi::class)
 class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     companion object { const val COUNTDOWN_SEC = 10 }
+    init { PlayerHolder.releaseOrphan() } // a background-only player from a previous screen
     val settings: AppSettings = SettingsStore.current
 
     private val loadControl = DefaultLoadControl.Builder()
@@ -283,6 +284,16 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         savePosition()
+        if (settings.backgroundAudio && player.isPlaying) {
+            // Back pressed: keep playing in the background (notification controls stay).
+            val future = controllerFuture
+            PlayerHolder.keepInBackground(player, savePosition = { savePosition() }) {
+                future?.let { MediaController.releaseFuture(it) }
+                PlayerHolder.detach()
+                player.release()
+            }
+            return
+        }
         controllerFuture?.let { MediaController.releaseFuture(it) }
         PlayerHolder.detach()
         player.release()

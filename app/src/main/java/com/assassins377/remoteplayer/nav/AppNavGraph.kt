@@ -2,6 +2,9 @@ package com.assassins377.remoteplayer.nav
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,6 +35,8 @@ object Routes {
 @Composable
 fun AppNavGraph() {
     val nav = rememberNavController()
+    val pending by com.assassins377.remoteplayer.ContinueWidget.pendingPlay.collectAsState()
+    LaunchedEffect(pending) { pending?.let { nav.navigate(Routes.player(it)); com.assassins377.remoteplayer.ContinueWidget.pendingPlay.value = null } }
     NavHost(navController = nav, startDestination = Routes.SERVERS) {
         composable(Routes.SERVERS) {
             ServerListScreen(

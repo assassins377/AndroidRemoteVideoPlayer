@@ -133,6 +133,7 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
             OutlinedTextField(
                 host, { host = it; vm.resetTest() },
                 label = { Text(if (type == ServerType.SMB) stringResource(com.assassins377.remoteplayer.R.string.host_smb) else stringResource(com.assassins377.remoteplayer.R.string.host_url)) },
+                supportingText = if (type == ServerType.SMB) { { Text(stringResource(com.assassins377.remoteplayer.R.string.host_smb_port_hint)) } } else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
             )

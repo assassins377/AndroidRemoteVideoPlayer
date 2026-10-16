@@ -63,7 +63,8 @@ object SmbPool {
 
     private fun entry(server: ServerConfig): Entry {
         entries[server.id]?.let { if (it.fingerprint == server && it.alive()) return it else it.close() }
-        val conn = client.connect(server.host)
+        val (host, port) = SmbHost.parse(server.host)
+        val conn = client.connect(host, port)
         val session = try { conn.authenticate(server.authContext()) } catch (t: Throwable) { conn.close(); throw t }
         return Entry(server, conn, session).also { entries[server.id] = it }
     }
@@ -85,5 +86,16 @@ object SmbPool {
     } catch (t: Throwable) {
         if (SmbErrors.invalidatesSession(SmbErrors.classify(t))) invalidate(server.id)
         throw SmbErrors.wrap(t)
+    }
+}
+
+/** "nas", "nas:4455", "192.168.1.5:139", "[fe80::1]:445" → host + port (default 445). */
+object SmbHost {
+    const val DEFAULT_PORT = 445
+    fun parse(s: String): Pair<String, Int> {
+        val t = s.trim().removePrefix("smb://").trimEnd('/')
+        Regex("""^\[(.+)](?::(\d+))?$""").matchEntire(t)?.let { return it.groupValues[1] to (it.groupValues[2].toIntOrNull() ?: DEFAULT_PORT) }
+        val parts = t.split(':')
+        return if (parts.size == 2) parts[0] to (parts[1].toIntOrNull()?.takeIf { it in 1..65535 } ?: DEFAULT_PORT) else t to DEFAULT_PORT
     }
 }
