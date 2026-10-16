@@ -219,4 +219,5 @@
     <string name="download_delete_q">Удалить скачанный файл с устройства?</string>
     <string name="download">Скачать на устройство</string>
     <string name="download_added">Добавлено в загрузки</string>
+    <string name="clear">Очистить</string>
 </resources>

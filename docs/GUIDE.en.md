@@ -338,6 +338,9 @@ Long-press a video → **Download to device**. It downloads in the background (n
 Add a server of type **Jellyfin**: address like `http://192.168.1.10:8096`, Jellyfin user name and password. **Test connection** logs in. The browser shows Jellyfin libraries (Movies, Shows…) as folders; movies and episodes play directly (original file, no transcoding). Watched marks sync: items played in Jellyfin are marked in the app when the folder is opened, and videos finished in the app (or marked manually in a series) are sent to the server. Jellyfin servers take part in the combined library and search.
 Limitations: the playback position is not sent to Jellyfin (resume works in the app only); no transcoding — if the phone can't decode the codec, the video won't play. Emby probably works too (same API) but is untested. **Plex is not supported**: it uses plex.tv sign-in and a different API — share Plex folders via SMB instead.
 
+### Search: suggestions and phrases
+In library search all words must match, by prefix (`star war 1977`). A quoted phrase must match in order: `"star wars"`. Title suggestions appear below the field (episodes collapse into the series name) — tap to use one. With an empty field, recent searches are shown; **Clear** removes them. Case doesn't matter.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

@@ -80,6 +80,8 @@ interface LibraryDao {
     fun observeCount(q: SupportSQLiteQuery): Flow<Int>
 
     @RawQuery suspend fun queryCount(q: SupportSQLiteQuery): Int
+
+    @RawQuery suspend fun strings(q: SupportSQLiteQuery): List<String>
 }
 
 @Database(entities = [EntryRow::class, EntryFts::class], version = 2, exportSchema = false)
@@ -99,8 +101,25 @@ object LibrarySql {
 
     /** FTS MATCH expression: every word as a prefix ("брат* 1997*"); null when the query has no words. */
     fun match(query: String): String? {
-        val words = normalize(query).split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
-        return if (words.isEmpty()) null else words.joinToString(" ") { "$it*" }
+        // "quoted phrase" → FTS phrase (last word as prefix); other words → AND of prefixes.
+        val parts = mutableListOf<String>()
+        var rest = query
+        Regex("\"([^\"]+)\"").findAll(query).forEach { m ->
+            val w = words(m.groupValues[1]); if (w.isNotEmpty()) parts += "\"" + w.joinToString(" ") + "*\""
+            rest = rest.replace(m.value, " ")
+        }
+        words(rest.replace("\"", " ")).forEach { parts += "$it*" }
+        return if (parts.isEmpty()) null else parts.joinToString(" ")
+    }
+
+    private fun words(s: String) = normalize(s).split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
+
+    /** Distinct title suggestions for the current input. */
+    fun suggestions(query: String, live: Collection<String>, limit: Int = 8): SupportSQLiteQuery? {
+        val m = match(query) ?: return null
+        val args = mutableListOf<Any>(); args.addAll(live); args += m
+        return SimpleSQLiteQuery("SELECT COALESCE(seriesTitle, title) FROM entries WHERE serverId IN (${live.joinToString(",") { "?" }}) " +
+            "AND id IN (SELECT rowid FROM entries_fts WHERE entries_fts MATCH ?) GROUP BY COALESCE(seriesKey, titleSort) ORDER BY COALESCE(seriesTitle, titleSort) LIMIT $limit", args.toTypedArray())
     }
 
     private fun where(query: String, servers: Collection<String>?, live: Collection<String>, args: MutableList<Any>, mode: LibraryMode = LibraryMode.ALL): String {
