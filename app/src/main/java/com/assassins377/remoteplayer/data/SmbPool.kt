@@ -1,5 +1,9 @@
 package com.assassins377.remoteplayer.data
 
+import com.assassins377.remoteplayer.settings.AppSettings
+import com.assassins377.remoteplayer.settings.SettingsStore
+import com.assassins377.remoteplayer.settings.SmbDialect
+import com.hierynomus.mssmb2.SMB2Dialect
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.SmbConfig
 import com.hierynomus.smbj.connection.Connection
@@ -13,15 +17,27 @@ import java.util.concurrent.TimeUnit
  * or the connection drops; callers invalidate on network/auth errors.
  */
 object SmbPool {
-    val client: SMBClient by lazy {
-        SMBClient(
-            SmbConfig.builder()
-                .withTimeout(20, TimeUnit.SECONDS)        // request timeout
-                .withSoTimeout(30, TimeUnit.SECONDS)      // socket read timeout
-                .withReadBufferSize(4 * 1024 * 1024)       // allow large SMB2 READs (server may cap)
-                .build()
-        )
+    private var clientRef: SMBClient? = null
+
+    /** Client built from current settings; rebuilt by [invalidateAll] when network settings change. */
+    val client: SMBClient
+        @Synchronized get() = clientRef ?: SMBClient(buildConfig(SettingsStore.current)).also { clientRef = it }
+
+    fun dialectsFor(d: SmbDialect): List<SMB2Dialect> = when (d) {
+        SmbDialect.AUTO -> listOf(SMB2Dialect.SMB_3_1_1, SMB2Dialect.SMB_3_0_2, SMB2Dialect.SMB_3_0, SMB2Dialect.SMB_2_1, SMB2Dialect.SMB_2_0_2)
+        SmbDialect.SMB2 -> listOf(SMB2Dialect.SMB_2_1, SMB2Dialect.SMB_2_0_2)
+        SmbDialect.SMB3 -> listOf(SMB2Dialect.SMB_3_1_1, SMB2Dialect.SMB_3_0_2, SMB2Dialect.SMB_3_0)
     }
+
+    private fun buildConfig(s: AppSettings): SmbConfig = SmbConfig.builder()
+        .withDialects(dialectsFor(s.smbDialect))
+        .withEncryptData(s.smbEncryption)                    // SMB3 only; ignored for SMB2
+        .withTimeout(s.timeoutSec.toLong(), TimeUnit.SECONDS)  // request timeout
+        .withSoTimeout(s.timeoutSec + 10L, TimeUnit.SECONDS)   // socket read timeout
+        .withReadBufferSize(4 * 1024 * 1024)                   // allow large SMB2 READs (server may cap)
+        .build()
+
+    fun defaultPolicy() = RetryPolicy(maxAttempts = SettingsStore.current.retryCount)
 
     private class Entry(val fingerprint: ServerConfig, val connection: Connection, val session: Session) {
         val shares = HashMap<String, DiskShare>()
@@ -56,10 +72,13 @@ object SmbPool {
     fun invalidate(serverId: String) { entries.remove(serverId)?.close() }
 
     @Synchronized
-    fun invalidateAll() { entries.values.forEach { it.close() }; entries.clear() }
+    fun invalidateAll() {
+        entries.values.forEach { it.close() }; entries.clear()
+        clientRef?.let { runCatching { it.close() } }; clientRef = null
+    }
 
     /** Runs [block] with retries; drops the pooled session on connection-level failures. */
-    fun <T> withRetry(server: ServerConfig, policy: RetryPolicy = RetryPolicy(), block: () -> T): T = try {
+    fun <T> withRetry(server: ServerConfig, policy: RetryPolicy = defaultPolicy(), block: () -> T): T = try {
         retryBlocking(policy, onRetry = { _, e ->
             if (SmbErrors.invalidatesSession(SmbErrors.classify(e))) invalidate(server.id)
         }) { block() }

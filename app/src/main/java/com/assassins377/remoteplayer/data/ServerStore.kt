@@ -57,6 +57,19 @@ object ServerStore {
         }
     }
 
+    /** Imports servers from [ServerTransfer] JSON; existing ids are replaced (password kept if the server already exists). */
+    suspend fun importJson(json: String): Int {
+        val incoming = ServerTransfer.decode(json)
+        save { list ->
+            val byId = list.associateBy { it.id }.toMutableMap()
+            incoming.forEach { s -> byId[s.id] = s.copy(password = byId[s.id]?.password ?: "") }
+            byId.values.toList()
+        }
+        return incoming.size
+    }
+
+    fun exportJson(): String = ServerTransfer.encode(_servers.value)
+
     fun repositoryFor(type: ServerType): RemoteFileRepository = when (type) {
         ServerType.SMB -> SmbRepository()
         ServerType.HTTP -> HttpRepository()

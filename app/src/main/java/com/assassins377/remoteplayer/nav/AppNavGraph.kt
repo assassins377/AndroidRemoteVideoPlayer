@@ -11,9 +11,11 @@ import com.assassins377.remoteplayer.ui.browser.FileBrowserScreen
 import com.assassins377.remoteplayer.ui.player.PlayerScreen
 import com.assassins377.remoteplayer.ui.servers.ServerEditScreen
 import com.assassins377.remoteplayer.ui.servers.ServerListScreen
+import com.assassins377.remoteplayer.ui.settings.SettingsScreen
 
 object Routes {
     const val SERVERS = "servers"
+    const val SETTINGS = "settings"
     const val EDIT_SERVER = "servers/edit?id={id}"
     fun editServer(id: String? = null) = if (id == null) "servers/edit" else "servers/edit?id=${Uri.encode(id)}"
     const val BROWSER = "browser/{serverId}"
@@ -31,8 +33,10 @@ fun AppNavGraph() {
                 onAdd = { nav.navigate(Routes.editServer()) },
                 onEdit = { nav.navigate(Routes.editServer(it.id)) },
                 onOpen = { nav.navigate(Routes.browser(it.id)) },
+                onSettings = { nav.navigate(Routes.SETTINGS) },
             )
         }
+        composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }) }
         composable(
             Routes.EDIT_SERVER,
             arguments = listOf(navArgument("id") { type = NavType.StringType; nullable = true; defaultValue = null }),

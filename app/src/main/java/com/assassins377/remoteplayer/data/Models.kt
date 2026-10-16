@@ -26,10 +26,16 @@ data class RemoteFile(
     val path: String,
     val isDirectory: Boolean,
     val size: Long = 0,
+    /** Last modified, epoch ms (0 = unknown). */
+    val modified: Long = 0,
+    val hidden: Boolean = false,
 ) {
+    val isSubtitle: Boolean get() = !isDirectory && SUB_EXT.any { name.endsWith(it, ignoreCase = true) }
+
     val isVideo: Boolean get() = !isDirectory && VIDEO_EXT.any { name.endsWith(it, ignoreCase = true) }
 
     companion object {
         val VIDEO_EXT = listOf(".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v", ".ts", ".wmv")
+        val SUB_EXT = listOf(".srt", ".ass", ".ssa", ".vtt")
     }
 }

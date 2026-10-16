@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 data class BrowserState(
     val path: String = "",
+    /** Raw listing; UI applies sort/hidden settings via FileSorter. */
     val files: List<RemoteFile> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,

@@ -55,7 +55,7 @@ class SmbDataSource : BaseDataSource(/* isNetwork = */ true) {
             server = s; path = p
             val f = SmbPool.withRetry(s) { openFile(s) }
             file = f
-            buffer = ReadAheadBuffer { pos, buf, off, len -> readRemote(pos, buf, off, len) }
+            buffer = ReadAheadBuffer(com.assassins377.remoteplayer.settings.SettingsStore.current.readAheadBytes) { pos, buf, off, len -> readRemote(pos, buf, off, len) }
             val size = f.fileInformation.standardInformation.endOfFile
             position = dataSpec.position
             if (position > size) throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
