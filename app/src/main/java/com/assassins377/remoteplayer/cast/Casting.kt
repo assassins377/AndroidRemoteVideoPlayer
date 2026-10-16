@@ -85,21 +85,22 @@ object Casting {
         _state.value = _state.value.copy(searching = false)
     }
 
-    /** Casts [playbackUri] from [positionMs]. */
-    fun cast(ctx: Context, target: CastTarget, playbackUri: String, fileName: String, title: String, positionMs: Long) {
-        val host = StreamProxy.lanAddress() ?: run { _state.value = _state.value.copy(error = "Wi-Fi?"); return }
+    /** Casts [playbackUri] from [positionMs]; [onStarted] runs (on Main) only once the target accepted playback. */
+    fun cast(ctx: Context, target: CastTarget, playbackUri: String, fileName: String, title: String, positionMs: Long, onStarted: () -> Unit = {}) {
+        val targetHost = (target as? CastTarget.Dlna)?.renderer?.location?.let { runCatching { java.net.URL(it).host }.getOrNull() }
+        val host = StreamProxy.lanAddress(ctx, targetHost) ?: run { _state.value = _state.value.copy(error = "Wi-Fi?"); return }
         val proxy = StreamProxy.shared(ctx)
         val mime = StreamProxy.mimeFor(fileName)
         val url = proxy.url(host, proxy.register(playbackUri, fileName, mime))
         stop(ctx)
         when (target) {
             is CastTarget.Dlna -> scope.launch(Dispatchers.IO) {
-                runCatching { Dlna.play(target.renderer, url, title, mime) }
-                    .onSuccess { dlna = target.renderer; _state.value = _state.value.copy(activeName = target.name, error = null) }
-                    .onFailure { e -> _state.value = _state.value.copy(error = e.message) }
+                runCatching { Dlna.play(target.renderer, url, title, mime); if (positionMs > 1000) Dlna.seek(target.renderer, positionMs) }
+                    .onSuccess { dlna = target.renderer; dlnaPaused = false; _state.value = _state.value.copy(activeName = target.name, error = null); scope.launch { onStarted() } }
+                    .onFailure { e -> _state.value = _state.value.copy(error = e.message ?: e.javaClass.simpleName) }
             }
             is CastTarget.Chromecast -> {
-                val cc = castContext(ctx) ?: return
+                val cc = castContext(ctx) ?: run { _state.value = _state.value.copy(error = "Google Play services?"); return }
                 pending = MediaItem.Builder().setUri(url).setMimeType(mime)
                     .setMediaMetadata(MediaMetadata.Builder().setTitle(title).build()).build()
                 pendingPos = positionMs
@@ -110,6 +111,7 @@ object Casting {
                 })
                 if (cp.isCastSessionAvailable) loadPending() else MediaRouter.getInstance(ctx).selectRoute(target.route)
                 _state.value = _state.value.copy(activeName = target.name, error = null)
+                onStarted()
             }
         }
     }
@@ -121,8 +123,9 @@ object Casting {
 
     fun togglePause() {
         castPlayer?.takeIf { it.isCastSessionAvailable }?.let { it.playWhenReady = !it.playWhenReady; return }
-        dlna?.let { r -> scope.launch(Dispatchers.IO) { Dlna.pause(r) } }
+        dlna?.let { r -> val resume = dlnaPaused; dlnaPaused = !resume; scope.launch(Dispatchers.IO) { if (resume) Dlna.resume(r) else Dlna.pause(r) } }
     }
+    @Volatile private var dlnaPaused = false
 
     fun stop(ctx: Context) {
         dlna?.let { r -> scope.launch(Dispatchers.IO) { Dlna.stop(r) } }; dlna = null

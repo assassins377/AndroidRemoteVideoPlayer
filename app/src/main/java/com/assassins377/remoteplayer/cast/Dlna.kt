@@ -60,6 +60,10 @@ object Dlna {
     fun stop(r: DlnaRenderer) { runCatching { soap(r, "Stop", "") } }
     fun pause(r: DlnaRenderer) { runCatching { soap(r, "Pause", "") } }
     fun resume(r: DlnaRenderer) { runCatching { soap(r, "Play", "<Speed>1</Speed>") } }
+    /** Seek to an absolute position; many renderers accept it only after playback started. */
+    fun seek(r: DlnaRenderer, positionMs: Long) { runCatching { soap(r, "Seek", "<Unit>REL_TIME</Unit><Target>${relTime(positionMs)}</Target>") } }
+
+    fun relTime(ms: Long): String { val t = ms / 1000; return "%d:%02d:%02d".format(t / 3600, t / 60 % 60, t % 60) }
 
     fun envelope(action: String, args: String) =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
