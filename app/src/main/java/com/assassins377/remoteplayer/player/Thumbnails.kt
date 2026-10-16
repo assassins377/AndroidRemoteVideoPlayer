@@ -11,6 +11,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -29,6 +30,8 @@ class StreamingMediaDataSource(private val factory: () -> DataSource, private va
     private var pos = -1L
     private var size = -1L
     var bytesRead = 0L; private set
+    /** Set from another thread to make the next read fail (timeout of a blocked extraction). */
+    @Volatile var aborted = false
 
     private fun openAt(p: Long) {
         runCatching { ds?.close() }
@@ -43,9 +46,11 @@ class StreamingMediaDataSource(private val factory: () -> DataSource, private va
     @Synchronized override fun readAt(position: Long, buffer: ByteArray, offset: Int, length: Int): Int {
         if (size in 0..position) return -1
         if (bytesRead > maxBytes) throw java.io.IOException("thumbnail read limit")
+        if (aborted) throw java.io.IOException("thumbnail aborted")
         if (ds == null || position != pos) openAt(position)
         var total = 0
         while (total < length) {
+            if (aborted) throw java.io.IOException("thumbnail aborted")
             val n = ds!!.read(buffer, offset + total, length - total)
             if (n == C.RESULT_END_OF_INPUT) break
             total += n
@@ -77,17 +82,36 @@ object Thumbnails {
         synchronized(failed) { if (uri in failed) return null }
         val (d, owner) = synchronized(inFlight) { inFlight[uri]?.let { it to false } ?: CompletableDeferred<File?>().also { inFlight[uri] = it }.let { it to true } }
         if (!owner) return d.await()
-        val res = try {
-            limiter.withPermit { withContext(Dispatchers.IO) { withTimeoutOrNull(45_000) { runCatching { extract(ctx, uri) }.getOrNull() } } }
-        } finally { synchronized(inFlight) { inFlight.remove(uri) } }
-        if (res == null) synchronized(failed) { failed += uri }
-        d.complete(res)
+        var res: File? = null
+        try {
+            res = limiter.withPermit { runWithTimeout(timeoutMs) { src -> extract(ctx, uri, src) } }
+            if (res == null) synchronized(failed) { failed += uri }
+        } finally {
+            synchronized(inFlight) { inFlight.remove(uri) }
+            d.complete(res) // also on cancellation, so waiters never hang
+        }
         return res
     }
 
-    private fun extract(ctx: Context, uri: String): File? {
+    var timeoutMs = 45_000L
+    private val detached = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Runs blocking [work] on a detached IO job; on timeout the source is aborted and the permit is released at once,
+     * so a stalled server can't block other thumbnails.
+     */
+    internal suspend fun <T> runWithTimeout(ms: Long, work: (StreamingAbort) -> T?): T? {
+        val abort = StreamingAbort()
+        val job = detached.async { runCatching { work(abort) }.getOrNull() }
+        return withTimeoutOrNull(ms) { job.await() } ?: run { abort.abort(); job.cancel(); null }
+    }
+
+    private fun extract(ctx: Context, uri: String, abort: StreamingAbort): File? {
         val out = fileFor(uri) ?: return null
+        out.parentFile?.mkdirs()
         val src = StreamingMediaDataSource({ RoutingDataSourceFactory(DefaultDataSource.Factory(ctx)).createDataSource() }, android.net.Uri.parse(uri))
+        abort.source = src
+        if (abort.isAborted) src.aborted = true
         val mmr = MediaMetadataRetriever()
         try {
             mmr.setDataSource(src)
@@ -101,9 +125,16 @@ object Thumbnails {
         } finally { runCatching { mmr.release() }; src.close() }
     }
 
-    fun clear() { dir?.listFiles()?.forEach { it.delete() }; synchronized(failed) { failed.clear() } }
+    fun clear() { dir?.listFiles()?.forEach { it.delete() }; dir?.mkdirs(); synchronized(failed) { failed.clear() } }
 
     private fun sha1(s: String) = MessageDigest.getInstance("SHA-1").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
+}
+
+/** Abort handle for an extraction running on another thread. */
+class StreamingAbort {
+    @Volatile var source: StreamingMediaDataSource? = null
+    @Volatile var isAborted = false; private set
+    fun abort() { isAborted = true; source?.aborted = true }
 }
 
 object PlayerFrame {

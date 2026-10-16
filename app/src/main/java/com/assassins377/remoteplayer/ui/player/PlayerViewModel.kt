@@ -145,7 +145,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         player.playWhenReady = true
     }
 
-    fun play(uri: String) {
+    /** [startMs]/[autoPlay] override resume position and auto-start (used for reloads, e.g. subtitle delay). */
+    fun play(uri: String, startMs: Long? = null, autoPlay: Boolean = true) {
         if (uri == currentUri) return
         savePosition()
         currentUri = uri
@@ -172,10 +173,10 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 item.setSubtitleConfigurations(subs)
             }
-            val start = if (settings.resume) ResumeStore.get(uri) ?: 0L else 0L
+            val start = startMs ?: if (settings.resume) ResumeStore.get(uri) ?: 0L else 0L
             player.setMediaItem(item.build(), start)
             player.prepare()
-            player.playWhenReady = true
+            player.playWhenReady = autoPlay
         }
     }
 
@@ -229,9 +230,9 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun savePosition() {
         val uri = currentUri ?: return
-        if (!settings.resume || player.playbackState == Player.STATE_IDLE) return
+        if (player.playbackState == Player.STATE_IDLE) return
         val dur = player.duration.takeIf { it != C.TIME_UNSET } ?: 0
-        ResumeStore.save(uri, player.currentPosition, dur)
+        if (settings.resume) ResumeStore.save(uri, player.currentPosition, dur)
         if (com.assassins377.remoteplayer.settings.WatchedStore.shouldMark(player.currentPosition, dur)) markWatched(uri)
     }
 
@@ -266,8 +267,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         savePosition()
         val pos = player.currentPosition; val wasPlaying = player.playWhenReady
         currentUri = null
-        play(uri)
-        viewModelScope.launch { delay(300); if (player.currentPosition < pos) player.seekTo(pos); player.playWhenReady = wasPlaying }
+        play(uri, startMs = pos, autoPlay = wasPlaying)
     }
 
     val currentPlaybackUri: String? get() = currentUri
