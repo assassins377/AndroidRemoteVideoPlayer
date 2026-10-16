@@ -16,7 +16,7 @@ import java.io.File
 
 /** Shifts cue times of SRT / WebVTT / ASS-SSA text by [ms] (negative = earlier, clamped at 0). Pure. */
 object SubtitleShift {
-    private val SRT_VTT = Regex("""(?:(\d{1,2}):)?(\d{2}):(\d{2})([,.])(\d{3})(?=\s*-->|\s*$|\s+(?:align|line|position|size|vertical))""", RegexOption.MULTILINE)
+    private val SRT_VTT = Regex("""(?:(\d{1,2}):)?(\d{2}):(\d{2})([,.])(\d{3})(?=\s*-->|\s*$|\s+(?:align|line|position|size|vertical|region))""", RegexOption.MULTILINE)
     private val ARROW_LINE = Regex("""^.*-->.*$""", RegexOption.MULTILINE)
     private val ASS_LINE = Regex("""^(Dialogue:\s*[^,]*,)(\d+):(\d{2}):(\d{2})\.(\d{2}),(\d+):(\d{2}):(\d{2})\.(\d{2}),""", RegexOption.MULTILINE)
 

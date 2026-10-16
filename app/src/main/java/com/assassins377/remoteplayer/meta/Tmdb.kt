@@ -290,7 +290,11 @@ object TmdbRepository {
     /** Called when key/toggle changes. */
     fun resetAuth() { authFailed = false }
 
-    fun clearCache() { cache.clear(); file?.delete() }
+    fun clearCache() { cache.clear(); synchronized(detailsCache) { detailsCache.clear() }; file?.delete() }
+
+    /** Media type for details: a manual choice wins over the parsed type. */
+    fun isTv(override: com.assassins377.remoteplayer.meta.TmdbOverride?, parsedSeries: Boolean) =
+        if (override?.meta != null) override.tv else parsedSeries
 
     private fun persist() { val f = file ?: return; runCatching { f.writeText(cache.toJson()) } }
 }
