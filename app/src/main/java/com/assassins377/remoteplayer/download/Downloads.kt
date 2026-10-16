@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -126,7 +127,8 @@ object DownloadStore {
         WorkManager.getInstance(c).enqueueUniqueWork(tagFor(uri), ExistingWorkPolicy.KEEP, req)
     }
 
-    fun tagFor(uri: String) = "dl:" + uri.hashCode()
+    /** Collision-resistant unique work name (full SHA-256 of the URI). */
+    fun tagFor(uri: String) = "dl:" + MessageDigest.getInstance("SHA-256").digest(uri.toByteArray()).joinToString("") { "%02x".format(it) }
     const val TAG = "download"
 
     fun markDone(uri: String, total: Long) = update { l -> l.map { if (it.uri == uri) it.copy(done = true, totalBytes = total) else it } }
@@ -142,7 +144,13 @@ object DownloadStore {
 
     private fun update(t: (List<DownloadItem>) -> List<DownloadItem>) {
         val n = synchronized(this) { t(_items.value).also { _items.value = it } }
-        val f = meta ?: return; val s = json.encodeToString(n)
-        scope.launch { runCatching { f.writeText(s) } }
+        persist()
+    }
+
+    private val writer = kotlinx.coroutines.sync.Mutex()
+    /** One writer at a time, always the latest snapshot, temp file + rename. */
+    private fun persist() {
+        val f = meta ?: return
+        scope.launch { writer.withLock { runCatching { com.assassins377.remoteplayer.settings.AtomicFiles.write(f, json.encodeToString(_items.value)) } } }
     }
 }

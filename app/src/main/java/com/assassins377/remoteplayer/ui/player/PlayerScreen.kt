@@ -54,6 +54,7 @@ private fun Context.findActivity(): Activity? = when (this) {
 fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewModel()) {
     val s = vm.settings
     LaunchedEffect(uri) { vm.play(uri) }
+    DisposableEffect(Unit) { com.assassins377.remoteplayer.ui.theme.Tv.fullScreen.value = true; onDispose { com.assassins377.remoteplayer.ui.theme.Tv.fullScreen.value = false } }
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
     val ctx = LocalContext.current
     val activity = remember(ctx) { ctx.findActivity() }
@@ -110,6 +111,8 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
             when (com.assassins377.remoteplayer.ui.theme.Tv.playerAction(ev.nativeKeyEvent.keyCode, visible)) {
                 com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.SEEK_BACK -> { vm.seekBy(-s.seekStepMs); hint = "−" + s.seekStepSec; true }
                 com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.SEEK_FORWARD -> { vm.seekBy(s.seekStepMs); hint = "+" + s.seekStepSec; true }
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.PLAY -> { vm.player.playWhenReady = true; playerView?.showController(); true }
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.PAUSE -> { vm.player.playWhenReady = false; playerView?.showController(); true }
                 com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.TOGGLE_PLAY -> { vm.player.playWhenReady = !vm.player.playWhenReady; playerView?.showController(); true }
                 com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.SHOW_CONTROLS -> { playerView?.showController(); true }
                 com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.NONE -> false
@@ -172,8 +175,11 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
             onPick = { t ->
                 val u = vm.currentPlaybackUri ?: uri
                 val name = com.assassins377.remoteplayer.data.PlaybackRef.parse(u)?.path?.substringAfterLast('/') ?: "video.mp4"
-                com.assassins377.remoteplayer.cast.Casting.cast(ctx, t, u, name, com.assassins377.remoteplayer.meta.TitleParser.parse(name).display, vm.player.currentPosition)
-                vm.player.pause(); showCast = false
+                com.assassins377.remoteplayer.cast.Casting.stopDiscovery(ctx)
+                // Errors stay visible in the dialog; local playback pauses only once the target started.
+                com.assassins377.remoteplayer.cast.Casting.cast(ctx, t, u, name, com.assassins377.remoteplayer.meta.TitleParser.parse(name).display, vm.player.currentPosition) {
+                    vm.player.pause(); showCast = false
+                }
             },
             onDismiss = { com.assassins377.remoteplayer.cast.Casting.stopDiscovery(ctx); showCast = false })
         castState.activeName?.let { name ->
