@@ -1,6 +1,7 @@
 package com.assassins377.remoteplayer.meta
 
 import android.content.Context
+import android.os.Build
 import com.assassins377.remoteplayer.data.KeystoreSecretStore
 import com.assassins377.remoteplayer.settings.AppLanguage
 import com.assassins377.remoteplayer.settings.SettingsStore
@@ -23,6 +24,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.util.Locale
 
 @Serializable
 data class TmdbMeta(
@@ -119,9 +121,11 @@ object TmdbRepository {
     private val limiter = Semaphore(3)
     private val inFlight = HashMap<String, CompletableDeferred<TmdbMeta?>>()
     private var file: File? = null
+    private var appContext: Context? = null
     @Volatile private var authFailed = false
 
     fun init(ctx: Context) {
+        appContext = ctx.applicationContext
         file = File(ctx.filesDir, "tmdb_cache.json").also { f ->
             if (f.exists()) runCatching { cache.loadJson(f.readText()) }
         }
@@ -130,7 +134,19 @@ object TmdbRepository {
     fun encryptKey(plain: String): String = if (plain.isBlank()) "" else secrets.encrypt(plain.trim())
     private fun decryptKey(enc: String): String = runCatching { secrets.decrypt(enc) }.getOrDefault("")
 
-    fun language(lang: AppLanguage) = if (lang == AppLanguage.EN) "en-US" else "ru-RU"
+    /** TMDB language tag: explicit RU/EN, or the effective app/device locale when SYSTEM. */
+    fun language(lang: AppLanguage): String = when (lang) {
+        AppLanguage.EN -> "en-US"
+        AppLanguage.RU -> "ru-RU"
+        AppLanguage.SYSTEM -> {
+            val loc = appContext?.resources?.configuration?.let { cfg ->
+                if (Build.VERSION.SDK_INT >= 24) cfg.locales[0] else {
+                    @Suppress("DEPRECATION") cfg.locale
+                }
+            } ?: Locale.getDefault()
+            if (loc.language.equals("en", ignoreCase = true)) "en-US" else "ru-RU"
+        }
+    }
 
     fun cached(p: ParsedTitle): TmdbMeta? = cache.get(keyFor(p))?.meta
 
@@ -152,10 +168,11 @@ object TmdbRepository {
                     var meta = client.search(p)
                     // Year in filename can be off by one / missing on TMDB: retry without year.
                     if (meta == null && p.year != null) meta = client.search(p.copy(year = null))
+                    cache.put(key, meta)
+                    persist()
                     meta
                 }
             }
-            cache.put(key, result); persist()
             deferred.complete(result)
             return result
         } catch (e: TmdbAuthException) {

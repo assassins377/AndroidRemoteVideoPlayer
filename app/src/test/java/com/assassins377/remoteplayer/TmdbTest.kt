@@ -43,4 +43,19 @@ class TmdbTest {
         assertFalse(TmdbClient.isBearer("0123456789abcdef0123456789abcdef"))
         assertTrue(TmdbClient.isBearer("eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIxMjMifQ.sig"))
     }
+
+    @Test fun languageTags() {
+        assertEquals("en-US", com.assassins377.remoteplayer.meta.TmdbRepository.language(com.assassins377.remoteplayer.settings.AppLanguage.EN))
+        assertEquals("ru-RU", com.assassins377.remoteplayer.meta.TmdbRepository.language(com.assassins377.remoteplayer.settings.AppLanguage.RU))
+        val prev = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.US)
+            assertEquals("en-US", com.assassins377.remoteplayer.meta.TmdbRepository.language(com.assassins377.remoteplayer.settings.AppLanguage.SYSTEM))
+            java.util.Locale.setDefault(java.util.Locale("ru", "RU"))
+            assertEquals("ru-RU", com.assassins377.remoteplayer.meta.TmdbRepository.language(com.assassins377.remoteplayer.settings.AppLanguage.SYSTEM))
+        } finally {
+            java.util.Locale.setDefault(prev)
+        }
+    }
+
 }
