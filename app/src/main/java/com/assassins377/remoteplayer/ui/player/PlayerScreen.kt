@@ -175,8 +175,11 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
             onPick = { t ->
                 val u = vm.currentPlaybackUri ?: uri
                 val name = com.assassins377.remoteplayer.data.PlaybackRef.parse(u)?.path?.substringAfterLast('/') ?: "video.mp4"
-                com.assassins377.remoteplayer.cast.Casting.cast(ctx, t, u, name, com.assassins377.remoteplayer.meta.TitleParser.parse(name).display, vm.player.currentPosition)
-                vm.player.pause(); showCast = false
+                com.assassins377.remoteplayer.cast.Casting.stopDiscovery(ctx)
+                // Errors stay visible in the dialog; local playback pauses only once the target started.
+                com.assassins377.remoteplayer.cast.Casting.cast(ctx, t, u, name, com.assassins377.remoteplayer.meta.TitleParser.parse(name).display, vm.player.currentPosition) {
+                    vm.player.pause(); showCast = false
+                }
             },
             onDismiss = { com.assassins377.remoteplayer.cast.Casting.stopDiscovery(ctx); showCast = false })
         castState.activeName?.let { name ->
