@@ -145,7 +145,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         player.playWhenReady = true
     }
 
-    fun play(uri: String) {
+    /** [startMs]/[autoPlay] override resume position and auto-start (used for reloads, e.g. subtitle delay). */
+    fun play(uri: String, startMs: Long? = null, autoPlay: Boolean = true) {
         if (uri == currentUri) return
         savePosition()
         currentUri = uri
@@ -172,10 +173,10 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 item.setSubtitleConfigurations(subs)
             }
-            val start = if (settings.resume) ResumeStore.get(uri) ?: 0L else 0L
+            val start = startMs ?: if (settings.resume) ResumeStore.get(uri) ?: 0L else 0L
             player.setMediaItem(item.build(), start)
             player.prepare()
-            player.playWhenReady = true
+            player.playWhenReady = autoPlay
         }
     }
 
@@ -266,8 +267,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         savePosition()
         val pos = player.currentPosition; val wasPlaying = player.playWhenReady
         currentUri = null
-        play(uri)
-        viewModelScope.launch { delay(300); if (player.currentPosition < pos) player.seekTo(pos); player.playWhenReady = wasPlaying }
+        play(uri, startMs = pos, autoPlay = wasPlaying)
     }
 
     fun setSpeed(value: Float) {
