@@ -14,6 +14,13 @@ class JellyfinTest {
       {"Id":"e1","Name":"Pilot","IsFolder":false,"Type":"Episode","SeriesName":"Breaking Bad","ParentIndexNumber":1,"IndexNumber":1,"Container":"mp4"},
       {"Id":"a1","Name":"Song","IsFolder":false,"Type":"Audio"}]}"""
 
+    @Test fun sessionBoundToConfig() {
+        val a = com.assassins377.remoteplayer.data.ServerConfig("j", "J", com.assassins377.remoteplayer.data.ServerType.JELLYFIN, "http://h:8096", username = "alice", password = "p")
+        org.junit.Assert.assertEquals(JellyfinRepository.fingerprint(a), JellyfinRepository.fingerprint(a.copy(name = "x")))
+        org.junit.Assert.assertNotEquals(JellyfinRepository.fingerprint(a), JellyfinRepository.fingerprint(a.copy(username = "bob")))
+        org.junit.Assert.assertNotEquals(JellyfinRepository.fingerprint(a), JellyfinRepository.fingerprint(a.copy(host = "http://other")))
+    }
+
     @Test fun parse() {
         val r = JellyfinRepository.parseItems(items, "v1").map { it.first }
         assertEquals(listOf("Breaking Bad", "The Matrix (1999).mkv", "Breaking Bad S01E01 Pilot.mp4"), r.map { it.name })

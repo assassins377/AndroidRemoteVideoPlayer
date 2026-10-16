@@ -16,6 +16,13 @@ import java.io.RandomAccessFile
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = TestApp::class)
 class ThumbnailTest {
+    @Test fun timeoutReleasesWithoutWaitingForBlockedWork() = kotlinx.coroutines.runBlocking {
+        val t0 = System.currentTimeMillis()
+        val r = com.assassins377.remoteplayer.player.Thumbnails.runWithTimeout(200) { a -> while (!a.isAborted) Thread.sleep(20); Thread.sleep(3000); "late" }
+        org.junit.Assert.assertNull(r); org.junit.Assert.assertTrue(System.currentTimeMillis() - t0 < 2000)
+        org.junit.Assert.assertEquals("ok", com.assassins377.remoteplayer.player.Thumbnails.runWithTimeout(2000) { "ok" })
+    }
+
     @Test fun framePosition() {
         assertEquals(0, PlayerFrame.positionUs(0))
         assertEquals(600_000_000L, PlayerFrame.positionUs(6_000_000))

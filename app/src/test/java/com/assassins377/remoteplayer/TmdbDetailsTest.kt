@@ -5,6 +5,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TmdbDetailsTest {
+    @Test fun manualTypeWins() {
+        val m = com.assassins377.remoteplayer.meta.TmdbMeta(1, "X")
+        org.junit.Assert.assertFalse(com.assassins377.remoteplayer.meta.TmdbRepository.isTv(com.assassins377.remoteplayer.meta.TmdbOverride(m, tv = false), true))
+        org.junit.Assert.assertTrue(com.assassins377.remoteplayer.meta.TmdbRepository.isTv(null, true))
+    }
+
     @Test fun parseMovie() {
         val body = """{"overview":"Нео","vote_average":8.2,"runtime":136,"tagline":"Добро пожаловать","genres":[{"id":1,"name":"Фантастика"},{"id":2,"name":"Боевик"}],
           "credits":{"cast":[{"name":"Keanu Reeves","character":"Neo","profile_path":"/k.jpg"},{"name":"Carrie-Anne Moss","character":"Trinity"}]},

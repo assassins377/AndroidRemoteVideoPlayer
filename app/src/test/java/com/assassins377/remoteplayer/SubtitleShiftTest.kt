@@ -11,6 +11,9 @@ class SubtitleShiftTest {
         assertEquals("1\n00:00:01,500 --> 00:00:03,000\nПривет 00:00:09,000\n\n2\n02:00:00,400 --> 02:00:00,600\nx\n", SubtitleShift.shift(s, 500, "srt"))
         assertEquals("1\n00:00:00,000 --> 00:00:00,500\nПривет 00:00:09,000\n\n2\n01:59:57,900 --> 01:59:58,100\nx\n", SubtitleShift.shift(s, -2000, "srt"))
     }
+    @Test fun vttRegion() {
+        assertEquals("00:02.000 --> 00:05.000 region:fred", SubtitleShift.shift("00:01.000 --> 00:04.000 region:fred", 1000, "vtt"))
+    }
     @Test fun vtt() {
         val s = "WEBVTT\n\n00:01.000 --> 00:04.000 align:start\nHi\n"
         assertEquals("WEBVTT\n\n00:02.250 --> 00:05.250 align:start\nHi\n", SubtitleShift.shift(s, 1250, "vtt"))

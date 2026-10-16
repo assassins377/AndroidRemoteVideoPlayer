@@ -1,5 +1,6 @@
 package com.assassins377.remoteplayer.ui.library
 
+import kotlinx.coroutines.flow.catch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Star
@@ -98,9 +99,11 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
             }
             var focused by remember { mutableStateOf(false) }
             val recent by RecentSearches.items.collectAsStateWithLifecycle()
-            val suggestions by produceState(emptyList<String>(), query, live) {
-                value = LibrarySql.suggestions(query, live)?.let { q -> runCatching { dao.strings(q) }.getOrDefault(emptyList()) }.orEmpty()
-            }
+            // Same filters as the list; re-emits as scan batches arrive.
+            val suggestions by remember(query, live, filter, mode) {
+                LibrarySql.suggestions(query, live, servers = filter, mode = mode)?.let { q -> dao.observeStrings(q).catch { emit(emptyList()) } }
+                    ?: kotlinx.coroutines.flow.flowOf(emptyList())
+            }.collectAsStateWithLifecycle(initialValue = emptyList())
             OutlinedTextField(input, { input = it }, placeholder = { Text(stringResource(R.string.library_search_hint)) },
                 singleLine = true,
                 trailingIcon = { if (input.isNotEmpty()) IconButton(onClick = { input = "" }) { Icon(Icons.Default.Close, stringResource(R.string.clear)) } },
@@ -143,7 +146,7 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
             when {
                 mode == LibraryMode.SERIES -> if (seriesList.isEmpty() && !st.scanning) Text(stringResource(R.string.library_nothing_found), Modifier.padding(24.dp))
                     else LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                        items(seriesList, key = { it.seriesKey }) { sr -> SeriesItem(sr, settings) { onOpenSeries(sr.seriesKey) } }
+                        items(seriesList, key = { it.seriesKey }) { sr -> SeriesItem(sr, settings) { if (query.isNotBlank()) RecentSearches.add(query); onOpenSeries(sr.seriesKey) } }
                     }
                 rows == null -> {}
                 rows.isEmpty() && !st.scanning -> Text(stringResource(if (query.isBlank() && serverFilter == null) R.string.library_empty else R.string.library_nothing_found), Modifier.padding(24.dp))

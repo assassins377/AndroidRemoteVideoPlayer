@@ -18,6 +18,12 @@ import java.net.URL
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = TestApp::class)
 class CastTest {
+    @Test fun dlnaRelTimeAndRouting() {
+        org.junit.Assert.assertEquals("1:02:03", Dlna.relTime(3_723_400))
+        org.junit.Assert.assertEquals("0:00:00", Dlna.relTime(0))
+        org.junit.Assert.assertEquals("127.0.0.1", StreamProxy.routedTo("127.0.0.1"))
+    }
+
     @Test fun ranges() {
         assertEquals(100L to null, Ranges.parse("bytes=100-")); assertEquals(0L to 99L, Ranges.parse("bytes=0-99"))
         assertNull(Ranges.parse("bytes=-500")); assertNull(Ranges.parse(null))
