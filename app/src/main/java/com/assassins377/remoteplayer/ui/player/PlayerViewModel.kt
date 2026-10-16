@@ -229,9 +229,9 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun savePosition() {
         val uri = currentUri ?: return
-        if (!settings.resume || player.playbackState == Player.STATE_IDLE) return
+        if (player.playbackState == Player.STATE_IDLE) return
         val dur = player.duration.takeIf { it != C.TIME_UNSET } ?: 0
-        ResumeStore.save(uri, player.currentPosition, dur)
+        if (settings.resume) ResumeStore.save(uri, player.currentPosition, dur)
         if (com.assassins377.remoteplayer.settings.WatchedStore.shouldMark(player.currentPosition, dur)) markWatched(uri)
     }
 
