@@ -20,6 +20,8 @@ import com.assassins377.remoteplayer.R
 import com.assassins377.remoteplayer.data.ServerStore
 import com.assassins377.remoteplayer.data.SmbPool
 import com.assassins377.remoteplayer.settings.*
+import com.assassins377.remoteplayer.meta.TmdbRepository
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -119,9 +121,27 @@ fun SettingsScreen(onBack: () -> Unit) {
             Toggle(R.string.pip, s.pipOnMinimize) { set("pipOnMinimize", it) }
             Toggle(R.string.lock_rotation, s.lockRotation) { set("lockRotation", it) }
 
+            Section(R.string.sec_tmdb)
+            Toggle(R.string.tmdb_enabled, s.tmdbEnabled) { set("tmdbEnabled", it); TmdbRepository.resetAuth() }
+            var keyInput by remember { mutableStateOf("") }
+            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(if (s.tmdbKeyEnc.isNotBlank()) R.string.tmdb_key_set else R.string.tmdb_key_none),
+                    style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(keyInput, { keyInput = it }, label = { Text(stringResource(R.string.tmdb_key)) },
+                    singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(enabled = keyInput.isNotBlank(), onClick = {
+                        set("tmdbKeyEnc", TmdbRepository.encryptKey(keyInput)); keyInput = ""
+                        TmdbRepository.resetAuth(); toast(done)
+                    }) { Text(stringResource(R.string.tmdb_save)) }
+                    if (s.tmdbKeyEnc.isNotBlank()) OutlinedButton(onClick = { set("tmdbKeyEnc", "") }) { Text(stringResource(R.string.tmdb_remove)) }
+                }
+                Text(stringResource(R.string.tmdb_help), style = MaterialTheme.typography.bodySmall)
+            }
+
             Section(R.string.sec_data)
             Action(R.string.clear_cache) {
-                scope.launch(Dispatchers.IO) { ctx.cacheDir.listFiles()?.forEach { it.deleteRecursively() }; SmbPool.invalidateAll() }
+                scope.launch(Dispatchers.IO) { ctx.cacheDir.listFiles()?.forEach { it.deleteRecursively() }; SmbPool.invalidateAll(); TmdbRepository.clearCache() }
                 toast(done)
             }
             Action(R.string.clear_history) { ResumeStore.clear(); toast(done) }

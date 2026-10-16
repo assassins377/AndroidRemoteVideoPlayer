@@ -41,6 +41,10 @@ data class AppSettings(
     val doubleTapSeek: Boolean = true,
     val pipOnMinimize: Boolean = false,
     val lockRotation: Boolean = false,
+    // TMDB
+    val tmdbEnabled: Boolean = false,
+    /** Keystore-encrypted API key/token (see TmdbRepository). */
+    val tmdbKeyEnc: String = "",
 ) {
     val seekStepMs: Long get() = seekStepSec * 1000L
     val readAheadBytes: Int get() = readAheadKb * 1024
@@ -89,6 +93,8 @@ data class AppSettings(
                 doubleTapSeek = b("doubleTapSeek", d.doubleTapSeek),
                 pipOnMinimize = b("pipOnMinimize", d.pipOnMinimize),
                 lockRotation = b("lockRotation", d.lockRotation),
+                tmdbEnabled = b("tmdbEnabled", d.tmdbEnabled),
+                tmdbKeyEnc = s("tmdbKeyEnc", d.tmdbKeyEnc),
             )
         }
     }

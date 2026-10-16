@@ -11,6 +11,7 @@ class RemotePlayerApp : Application() {
         super.onCreate()
         SettingsStore.init(this)
         ResumeStore.init(this)
+        com.assassins377.remoteplayer.meta.TmdbRepository.init(this)
         ServerStore.init(this, KeystoreSecretStore())
     }
 }

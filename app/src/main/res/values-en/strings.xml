@@ -64,4 +64,14 @@
     <string name="imported_fmt">Imported %d servers. Re-enter passwords.</string>
     <string name="import_failed">Import failed</string>
     <string name="lang_any">Any</string>
+    <string name="sec_tmdb">Posters &amp; titles (TMDB)</string>
+    <string name="tmdb_enabled">Load posters and titles</string>
+    <string name="tmdb_key">TMDB API key (v3) or read token (v4)</string>
+    <string name="tmdb_key_set">Key saved (encrypted)</string>
+    <string name="tmdb_key_none">No key set</string>
+    <string name="tmdb_save">Save key</string>
+    <string name="tmdb_remove">Remove key</string>
+    <string name="tmdb_help">Free key: sign up at themoviedb.org → Settings → API → create key (Developer). Title language follows the app language.</string>
+    <string name="details">Details</string>
+    <string name="file_name">File</string>
 </resources>

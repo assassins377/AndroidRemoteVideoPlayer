@@ -13,8 +13,8 @@ android {
         applicationId = "com.assassins377.remoteplayer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 4
+        versionName = "0.4.0"
     }
     buildTypes {
         release {
@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.coil.compose)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     // TODO WebDAV: implementation("com.github.thegrizzlylabs:sardine-android:0.9") (JitPack)

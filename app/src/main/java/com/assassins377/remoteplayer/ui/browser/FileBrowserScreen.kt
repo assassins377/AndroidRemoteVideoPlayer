@@ -17,6 +17,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.assassins377.remoteplayer.data.SmbErrorKind
 import com.assassins377.remoteplayer.data.RemoteFile
+import com.assassins377.remoteplayer.meta.ParsedTitle
+import com.assassins377.remoteplayer.meta.TmdbMeta
 import com.assassins377.remoteplayer.settings.FileSorter
 import com.assassins377.remoteplayer.settings.SettingsStore
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -39,6 +41,9 @@ fun FileBrowserScreen(
         FileSorter.sort(state.files, settings.sort, settings.showHidden)
     }
     val onClick = { f: RemoteFile -> if (f.isDirectory) vm.open(f.path) else vm.playbackUri(f)?.let(onPlay); Unit }
+    var details by remember { mutableStateOf<Triple<RemoteFile, ParsedTitle?, TmdbMeta?>?>(null) }
+    val onDetails = { f: RemoteFile, p: ParsedTitle?, m: TmdbMeta? -> details = Triple(f, p, m) }
+    details?.let { (f, p, m) -> DetailsSheet(f, p, m, onPlay = { details = null; onClick(f) }, onDismiss = { details = null }) }
     val goBack = { if (!vm.up()) onBack() }
     BackHandler(onBack = goBack)
 
@@ -61,25 +66,10 @@ fun FileBrowserScreen(
                     Button(onClick = vm::reload) { Text("Повторить") }
                 }
                 settings.grid -> LazyVerticalGrid(GridCells.Adaptive(120.dp), contentPadding = PaddingValues(8.dp)) {
-                    gridItems(files, key = { it.path }) { f ->
-                        // Placeholder icon instead of a real video thumbnail (frame extraction over SMB is too heavy for now).
-                        Card(Modifier.padding(4.dp).clickable { onClick(f) }) {
-                            Column(Modifier.padding(8.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(if (f.isDirectory) Icons.Default.Folder else Icons.Default.Movie, null, Modifier.size(56.dp))
-                                Text(f.name, maxLines = 2, style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
+                    gridItems(files, key = { it.path }) { f -> FileCard(f, settings, { onClick(f) }, onDetails) }
                 }
                 else -> LazyColumn {
-                    items(files, key = { it.path }) { f ->
-                        ListItem(
-                            leadingContent = { Icon(if (f.isDirectory) Icons.Default.Folder else Icons.Default.Movie, null) },
-                            headlineContent = { Text(f.name) },
-                            supportingContent = if (f.isDirectory) null else ({ Text("%.1f МБ".format(f.size / 1_048_576.0)) }),
-                            modifier = Modifier.clickable { onClick(f) },
-                        )
-                    }
+                    items(files, key = { it.path }) { f -> FileRow(f, settings, { onClick(f) }, onDetails) }
                 }
             }
         }
