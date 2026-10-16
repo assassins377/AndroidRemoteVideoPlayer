@@ -5,9 +5,11 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,49 +21,67 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.assassins377.remoteplayer.R
 import com.assassins377.remoteplayer.data.ServerStore
-import com.assassins377.remoteplayer.library.LibraryQuery
-import com.assassins377.remoteplayer.library.LibrarySort
-import com.assassins377.remoteplayer.library.LibraryStore
+import com.assassins377.remoteplayer.library.*
 import com.assassins377.remoteplayer.settings.SettingsStore
 import com.assassins377.remoteplayer.ui.browser.Poster
 import com.assassins377.remoteplayer.ui.browser.headline
 import com.assassins377.remoteplayer.ui.browser.rememberMeta
 import com.assassins377.remoteplayer.ui.browser.subline
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.text.DateFormat
 import java.util.Date
 
-/** Combined library of all servers: search, sort, server filter; tap plays via the existing player (resume included). */
+private const val PAGE = 200
+
+/** Combined library: FTS search (debounced), SQL sort/filter, LIMIT-based paging, scan progress with cancel. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit) {
     val st by LibraryStore.state.collectAsStateWithLifecycle()
     val servers by ServerStore.servers.collectAsStateWithLifecycle()
     val settings by SettingsStore.settings.collectAsStateWithLifecycle()
-    var query by rememberSaveable { mutableStateOf("") }
+    var input by rememberSaveable { mutableStateOf("") }
+    var query by remember { mutableStateOf(input) }
+    LaunchedEffect(input) { if (input.isNotEmpty()) delay(250); query = input }
     var sort by rememberSaveable { mutableStateOf(LibrarySort.TITLE) }
     var serverFilter by rememberSaveable { mutableStateOf<String?>(null) }
-    val live = remember(servers) { servers.map { it.id }.toSet() }
-    val list = remember(st.data, query, sort, serverFilter, live) {
-        LibraryQuery.apply(st.data.entries, query, serverFilter?.let { setOf(it) }, sort, live)
+    var limit by remember(query, sort, serverFilter) { mutableIntStateOf(PAGE) }
+    val live = remember(servers) { servers.map { it.id } }
+    val filter = serverFilter?.let { listOf(it) }
+    val dao = LibraryStore.db.dao()
+    val list by remember(query, sort, filter, live, limit) { dao.observe(LibrarySql.list(query, filter, sort, live, limit)) }
+        .collectAsStateWithLifecycle(initialValue = null)
+    val total by remember(query, filter, live) { dao.observeCount(LibrarySql.count(query, filter, live)) }.collectAsStateWithLifecycle(initialValue = 0)
+    val listState = rememberLazyListState()
+    LaunchedEffect(listState, list) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.distinctUntilChanged().collect { last ->
+            val n = list?.size ?: 0
+            if (n >= limit && last >= n - 30) limit += PAGE
+        }
     }
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(stringResource(R.string.library)) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
             actions = {
-                IconButton(onClick = { LibraryStore.refresh() }, enabled = !st.scanning) {
-                    Icon(Icons.Default.Refresh, stringResource(R.string.library_refresh))
-                }
+                if (st.scanning) IconButton(onClick = { LibraryStore.cancel() }) { Icon(Icons.Default.Close, stringResource(R.string.library_cancel)) }
+                else IconButton(onClick = { LibraryStore.refresh() }) { Icon(Icons.Default.Refresh, stringResource(R.string.library_refresh)) }
             },
         )
     }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             if (st.scanning) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-                Text(stringResource(R.string.library_scanning) + " " + st.progress, Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.bodySmall)
+                val n = st.progress.size.coerceAtLeast(1)
+                LinearProgressIndicator(progress = { st.serversDone.toFloat() / n }, modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.library_progress_fmt, st.serversDone, st.progress.size, st.filesFound),
+                    Modifier.padding(horizontal = 16.dp, vertical = 2.dp), style = MaterialTheme.typography.bodySmall)
+                st.progress.values.filter { !it.done }.forEach { p ->
+                    Text(stringResource(R.string.library_server_progress_fmt, p.name, p.folders, p.files),
+                        Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
+                }
             }
-            OutlinedTextField(query, { query = it }, placeholder = { Text(stringResource(R.string.library_search_hint)) },
+            OutlinedTextField(input, { input = it }, placeholder = { Text(stringResource(R.string.library_search_hint)) },
                 singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(LibrarySort.TITLE to R.string.library_sort_title, LibrarySort.YEAR to R.string.library_sort_year,
@@ -73,19 +93,22 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit) {
                 FilterChip(selected = serverFilter == null, onClick = { serverFilter = null }, label = { Text(stringResource(R.string.library_all_servers)) })
                 servers.forEach { s -> FilterChip(selected = serverFilter == s.id, onClick = { serverFilter = s.id }, label = { Text(s.name) }) }
             }
-            if (st.data.updatedAt > 0) Text(
-                stringResource(R.string.library_count_fmt, list.size, DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(st.data.updatedAt))),
-                Modifier.padding(horizontal = 16.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall)
-            st.data.errors.forEach { (id, msg) ->
+            val info = buildList {
+                add(stringResource(R.string.library_total_fmt, total))
+                if (st.updatedAt > 0) add(stringResource(R.string.library_updated_fmt, DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(st.updatedAt))))
+            }.joinToString(" · ")
+            Text(info, Modifier.padding(horizontal = 16.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall)
+            st.errors.forEach { (id, msg) ->
                 val name = servers.firstOrNull { it.id == id }?.name ?: return@forEach
                 Text(stringResource(R.string.library_error_fmt, name, msg), Modifier.padding(horizontal = 16.dp),
                     color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
+            val rows = list
             when {
-                st.data.entries.isEmpty() && !st.scanning -> Text(stringResource(R.string.library_empty), Modifier.padding(24.dp))
-                list.isEmpty() && !st.scanning -> Text(stringResource(R.string.library_nothing_found), Modifier.padding(24.dp))
-                else -> LazyColumn(Modifier.fillMaxSize()) {
-                    items(list, key = { it.key }) { e ->
+                rows == null -> {}
+                rows.isEmpty() && !st.scanning -> Text(stringResource(if (query.isBlank() && serverFilter == null) R.string.library_empty else R.string.library_nothing_found), Modifier.padding(24.dp))
+                else -> LazyColumn(Modifier.fillMaxSize(), state = listState) {
+                    items(rows, key = { it.id }) { e ->
                         val server = servers.firstOrNull { it.id == e.serverId } ?: return@items
                         val f = remember(e) { e.toRemoteFile() }
                         val (p, m) = rememberMeta(f, settings, e.serverId)

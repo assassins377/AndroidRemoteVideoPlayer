@@ -182,4 +182,9 @@
     <string name="library_roots">Корневые папки</string>
     <string name="library_roots_help">По одной папке на строку (например Movies или Фильмы/Новые). Пусто — весь сервер. Применяется ко всем серверам; несуществующие папки пропускаются.</string>
     <string name="library_clear">Очистить библиотеку</string>
+    <string name="library_cancel">Остановить</string>
+    <string name="library_progress_fmt">Серверы: %1$d из %2$d · найдено видео: %3$d</string>
+    <string name="library_server_progress_fmt">%1$s: папок %2$d, видео %3$d</string>
+    <string name="library_total_fmt">Найдено: %1$d</string>
+    <string name="library_updated_fmt">Обновлено %1$s</string>
 </resources>

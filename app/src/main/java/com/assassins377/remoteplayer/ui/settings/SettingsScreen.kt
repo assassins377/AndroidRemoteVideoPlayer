@@ -154,7 +154,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     OutlinedButton(onClick = { com.assassins377.remoteplayer.library.LibraryStore.refresh(); toast(done) }) { Text(stringResource(R.string.library_refresh)) }
                 }
             }
-            Action(R.string.library_clear) { com.assassins377.remoteplayer.library.LibraryStore.clear(); toast(done) }
+            Action(R.string.library_clear) { scope.launch { com.assassins377.remoteplayer.library.LibraryStore.clear() }; toast(done) }
 
             Section(R.string.sec_data)
             Action(R.string.clear_cache) {

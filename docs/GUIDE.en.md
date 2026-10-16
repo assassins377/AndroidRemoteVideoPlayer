@@ -302,6 +302,8 @@ You can add several servers of different types (SMB, WebDAV, HTTP) at once — e
 - **Search all servers** searches titles across the whole library.
 - Sort: **Title**, **Year**, **Date added**. Filter: **All servers** or one server.
 - Tapping a video plays it in the normal player and resumes where you stopped.
+- While refreshing you see how many servers are done and, per server, how many folders were scanned and videos found. Found videos show up in the list right away. **Stop** (✕) cancels the refresh; what was found is kept. Up to 3 servers are scanned at once; a server that takes longer than 15 minutes gets a "timeout" error.
+- Search runs a quarter second after you stop typing and matches word beginnings (e.g. "matr" finds "Matrix"), case-insensitive. Large libraries (tens of thousands of files) load as you scroll.
 - If a server can't be reached, an error with its name appears below the search field and its old entries stay in the library.
 - New files appear only after a refresh (button, or automatically on start — see Settings).
 

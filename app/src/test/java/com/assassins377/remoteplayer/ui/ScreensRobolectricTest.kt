@@ -147,6 +147,7 @@ class LibraryScreenRobolectricTest {
         val app = ApplicationProvider.getApplicationContext<Application>()
         com.assassins377.remoteplayer.AppStrings.context = app
         SettingsStore.init(app); runCatching { ServerStore.init(app, PlainSecrets) }
+        com.assassins377.remoteplayer.library.LibraryStore.init(app, com.assassins377.remoteplayer.library.LibraryDatabase.inMemory(app))
         val fake = FakeRepo()
         ServerStore.repositoryOverride = { fake }
         runBlocking {
@@ -157,12 +158,13 @@ class LibraryScreenRobolectricTest {
         }
         var played: String? = null
         compose.setContent { com.assassins377.remoteplayer.ui.library.LibraryScreen(onPlay = { played = it }, onBack = {}) }
-        compose.onAllNodesWithText("Inception (2010)").assertCountEquals(2) // both servers
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Inception (2010)").fetchSemanticsNodes().size == 2 } // both servers
         compose.onNodeWithText("Поиск по всем серверам").performTextInput("брат")
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("The Matrix (1999)").fetchSemanticsNodes().isEmpty() }
         compose.onAllNodesWithText("The Matrix (1999)").assertCountEquals(0)
         compose.onNodeWithText("Все серверы").assertExists()
         compose.onAllNodesWithText("Сервер 2")[0].performClick() // filter chip
-        compose.onAllNodesWithText("Брат (1997)").assertCountEquals(1)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Брат (1997)").fetchSemanticsNodes().size == 1 }
         compose.onNodeWithText("Брат (1997)").performClick()
         assertEquals("fake://Брат.1997.720p.mkv", played)
     }

@@ -6,26 +6,19 @@ import com.assassins377.remoteplayer.data.RemoteFileRepository
 import com.assassins377.remoteplayer.data.ServerConfig
 import com.assassins377.remoteplayer.data.ServerStore
 import com.assassins377.remoteplayer.meta.TitleParser
-import com.assassins377.remoteplayer.settings.FileFilter
 import com.assassins377.remoteplayer.settings.SettingsStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
-/** One indexed video file. */
+/** Legacy JSON cache format (v1 of the library, imported once into Room). */
 @Serializable
 data class LibraryEntry(
     val serverId: String,
@@ -33,139 +26,166 @@ data class LibraryEntry(
     val name: String,
     val size: Long = 0,
     val modified: Long = 0,
-    /** When this file first appeared in the index (epoch ms). */
     val addedAt: Long = 0,
-) {
-    val key: String get() = "$serverId/$path"
-    val year: Int? get() = TitleParser.parse(name).year
-    val title: String get() = TitleParser.parse(name).display
-    fun toRemoteFile() = RemoteFile(name, path, false, size, modified)
-}
+)
 
 @Serializable
-data class LibraryData(
-    val entries: List<LibraryEntry> = emptyList(),
-    val updatedAt: Long = 0,
-    /** serverId -> last error message of that server's scan. */
-    val errors: Map<String, String> = emptyMap(),
-)
+data class LibraryData(val entries: List<LibraryEntry> = emptyList(), val updatedAt: Long = 0, val errors: Map<String, String> = emptyMap())
 
 enum class LibrarySort { TITLE, YEAR, ADDED }
 
-/** Recursive scan of one server; pure (repository injected) for tests. */
+fun EntryRow.toRemoteFile() = RemoteFile(name, path, false, size, modified)
+val EntryRow.key: String get() = "$serverId/$path"
+
+object LibraryRows {
+    fun of(serverId: String, path: String, name: String, size: Long, modified: Long, addedAt: Long, scanId: Long, id: Long = 0): EntryRow {
+        val p = TitleParser.parse(name)
+        return EntryRow(id, serverId, path.trim('/'), name, p.display, p.display.lowercase().replace('ё', 'е'), p.year, size, modified,
+            addedAt, scanId, LibrarySql.normalize(name), LibrarySql.normalize(p.display))
+    }
+}
+
+/** Recursive BFS scan of one server; pure (repository injected) for tests. */
 object LibraryScanner {
-    /** Parses the "root folders" setting: one path per line or comma-separated; empty = share/base root. */
     fun parseRoots(s: String): List<String> =
         s.split('\n', ',', ';').map { it.trim().trim('/') }.filter { it.isNotEmpty() }.distinct().ifEmpty { listOf("") }
 
+    /**
+     * Calls [onFolder] after each listed folder and [onBatch] with every [batchSize] videos (and the rest at the end).
+     * A failing root folder throws; failing subfolders are skipped. Returns the number of videos found.
+     */
     suspend fun scan(
-        server: ServerConfig,
-        repo: RemoteFileRepository,
-        roots: List<String>,
-        maxDepth: Int,
-        includeHidden: Boolean = false,
-        maxFiles: Int = 50_000,
-    ): List<RemoteFile> = coroutineScope {
-        val out = ArrayList<RemoteFile>()
+        server: ServerConfig, repo: RemoteFileRepository, roots: List<String>, maxDepth: Int,
+        includeHidden: Boolean = false, maxFiles: Int = 50_000, batchSize: Int = 500,
+        onFolder: (folders: Int, files: Int) -> Unit = { _, _ -> },
+        onBatch: suspend (List<RemoteFile>) -> Unit = {},
+    ): Int = coroutineScope {
+        var found = 0; var folders = 0
+        val batch = ArrayList<RemoteFile>()
         val seen = HashSet<String>()
-        // BFS; depth 0 = root folder itself.
         val queue = ArrayDeque(roots.map { it to 0 })
-        while (queue.isNotEmpty() && out.size < maxFiles) {
+        while (queue.isNotEmpty() && found < maxFiles) {
             ensureActive()
             val (dir, depth) = queue.removeFirst()
             if (!seen.add(dir)) continue
-            val items = try { repo.list(server, dir) } catch (e: Exception) { if (dir in roots) throw e else continue }
+            val items = try { repo.list(server, dir) } catch (e: CancellationException) { throw e } catch (e: Exception) { if (dir in roots) throw e else continue }
+            folders++
             for (f in items) {
-                if (f.hidden && !includeHidden) continue
-                if (f.name.startsWith('.') && !includeHidden) continue
+                if ((f.hidden || f.name.startsWith('.')) && !includeHidden) continue
                 if (f.isDirectory) { if (depth < maxDepth) queue.addLast(f.path.trim('/') to depth + 1) }
-                else if (f.isVideo) out += f
+                else if (f.isVideo && found < maxFiles) { batch += f; found++ }
             }
+            onFolder(folders, found)
+            if (batch.size >= batchSize) { onBatch(batch.toList()); batch.clear() }
         }
-        out
-    }
-
-    /** Builds entries for [serverId], keeping the original addedAt of files already known. */
-    fun merge(serverId: String, files: List<RemoteFile>, previous: List<LibraryEntry>, now: Long): List<LibraryEntry> {
-        val old = previous.filter { it.serverId == serverId }.associateBy { it.path }
-        return files.distinctBy { it.path }.map { f ->
-            LibraryEntry(serverId, f.path.trim('/'), f.name, f.size, f.modified, old[f.path.trim('/')]?.addedAt ?: f.modified.takeIf { it > 0 } ?: now)
-        }
+        if (batch.isNotEmpty()) onBatch(batch.toList())
+        found
     }
 }
 
-/** Search / filter / sort over the index; pure for tests. */
-object LibraryQuery {
-    fun apply(entries: List<LibraryEntry>, query: String, servers: Set<String>?, sort: LibrarySort, liveServers: Set<String>): List<LibraryEntry> {
-        val parsed = entries.asSequence()
-            .filter { it.serverId in liveServers && (servers == null || it.serverId in servers) }
-            .map { it to TitleParser.parse(it.name) }
-            .filter { (e, p) -> FileFilter.matches(e.name, p.display, query) }
-            .toList()
-        val byTitle = compareBy<Pair<LibraryEntry, com.assassins377.remoteplayer.meta.ParsedTitle>> { it.second.display.lowercase() }
-        val sorted = when (sort) {
-            LibrarySort.TITLE -> parsed.sortedWith(byTitle)
-            LibrarySort.YEAR -> parsed.sortedWith(compareByDescending<Pair<LibraryEntry, com.assassins377.remoteplayer.meta.ParsedTitle>> { it.second.year ?: 0 }.then(byTitle))
-            LibrarySort.ADDED -> parsed.sortedWith(compareByDescending<Pair<LibraryEntry, com.assassins377.remoteplayer.meta.ParsedTitle>> { it.first.addedAt }.then(byTitle))
-        }
-        return sorted.map { it.first }
-    }
+data class ServerProgress(val name: String, val folders: Int = 0, val files: Int = 0, val done: Boolean = false, val error: String? = null)
+
+data class LibraryState(
+    val scanning: Boolean = false,
+    val progress: Map<String, ServerProgress> = emptyMap(),
+    val updatedAt: Long = 0,
+    val errors: Map<String, String> = emptyMap(),
+) {
+    val serversDone: Int get() = progress.values.count { it.done }
+    val filesFound: Int get() = progress.values.sumOf { it.files }
 }
 
-data class LibraryState(val data: LibraryData = LibraryData(), val scanning: Boolean = false, val progress: String = "")
-
-/** Index persisted to filesDir/library.json; refreshed in the background. */
+/** Library index in Room; background rescans with per-server progress, limited parallelism, timeout and cancel. */
 object LibraryStore {
+    const val PARALLEL = 3
+    var serverTimeoutMs = 15 * 60_000L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val json = Json { ignoreUnknownKeys = true }
     private val _state = MutableStateFlow(LibraryState())
     val state: StateFlow<LibraryState> = _state.asStateFlow()
-    private var file: File? = null
+    @Volatile private var _db: LibraryDatabase? = null
+    val db: LibraryDatabase get() = _db ?: error("LibraryStore not initialised")
+    private var prefs: android.content.SharedPreferences? = null
     private var job: Job? = null
 
-    fun init(ctx: Context) {
-        file = File(ctx.filesDir, "library.json").also { f ->
-            if (f.exists()) runCatching { _state.value = LibraryState(json.decodeFromString<LibraryData>(f.readText())) }
+    fun init(ctx: Context, database: LibraryDatabase = LibraryDatabase.open(ctx.applicationContext)) {
+        _db = database
+        prefs = ctx.getSharedPreferences("library_meta", Context.MODE_PRIVATE)
+        _state.value = LibraryState(updatedAt = prefs?.getLong("updatedAt", 0) ?: 0)
+        val legacy = File(ctx.filesDir, "library.json")
+        scope.launch {
+            if (legacy.exists()) runCatching { importLegacy(legacy.readText()) }.also { legacy.delete() }
+            if (SettingsStore.current.libraryRefreshOnStart) refresh()
         }
-        if (SettingsStore.current.libraryRefreshOnStart) refresh()
     }
 
-    fun decode(s: String): LibraryData = json.decodeFromString(s)
-    fun encode(d: LibraryData): String = json.encodeToString(d)
+    private val json = Json { ignoreUnknownKeys = true }
 
-    /** Starts a background rescan of all servers (no-op if one is running). */
+    /** One-time import of the v1 JSON cache. */
+    suspend fun importLegacy(text: String): Int {
+        val d = json.decodeFromString<LibraryData>(text)
+        val rows = d.entries.map { LibraryRows.of(it.serverId, it.path, it.name, it.size, it.modified, it.addedAt, 0) }
+        rows.chunked(1000).forEach { db.dao().upsert(it) }
+        if (d.updatedAt > 0 && _state.value.updatedAt == 0L) setUpdated(d.updatedAt)
+        return rows.size
+    }
+
+    private fun setUpdated(t: Long) { prefs?.edit()?.putLong("updatedAt", t)?.apply(); _state.update { it.copy(updatedAt = t) } }
+
     @Synchronized fun refresh(): Job {
         job?.takeIf { it.isActive }?.let { return it }
         return scope.launch { refreshNow() }.also { job = it }
     }
 
-    suspend fun refreshNow(servers: List<ServerConfig> = ServerStore.servers.value, repoFor: (ServerConfig) -> RemoteFileRepository = { ServerStore.repositoryFor(it.type) }) {
+    @Synchronized fun cancel() { job?.cancel() }
+
+    suspend fun refreshNow(
+        servers: List<ServerConfig> = ServerStore.servers.value,
+        repoFor: (ServerConfig) -> RemoteFileRepository = { ServerStore.repositoryFor(it.type) },
+    ) {
         val s = SettingsStore.current
         val roots = LibraryScanner.parseRoots(s.libraryRoots)
-        _state.value = _state.value.copy(scanning = true, progress = "")
+        val dao = db.dao()
+        _state.update { it.copy(scanning = true, progress = servers.associate { srv -> srv.id to ServerProgress(srv.name) }) }
         try {
-            val prev = _state.value.data
-            val results = coroutineScope {
+            dao.deleteServersExcept(servers.map { it.id }.ifEmpty { listOf("") })
+            val limiter = Semaphore(PARALLEL)
+            val errors = coroutineScope {
                 servers.map { srv ->
                     async {
-                        srv.id to runCatching { LibraryScanner.scan(srv, repoFor(srv), roots, s.libraryMaxDepth, s.showHidden) }
-                            .also { _state.value = _state.value.copy(progress = srv.name) }
+                        limiter.withPermit {
+                            val err = try { withTimeout(serverTimeoutMs) { scanServer(srv, repoFor(srv), roots, s.libraryMaxDepth, s.showHidden) }; null }
+                            catch (e: TimeoutCancellationException) { "timeout" }
+                            catch (e: CancellationException) { throw e }
+                            catch (e: Exception) { e.message ?: e.javaClass.simpleName }
+                            _state.update { st -> st.copy(progress = st.progress + (srv.id to (st.progress[srv.id] ?: ServerProgress(srv.name)).copy(done = true, error = err))) }
+                            err?.let { srv.id to it }
+                        }
                     }
-                }.awaitAll()
+                }.awaitAll().filterNotNull().toMap()
             }
-            val now = System.currentTimeMillis()
-            val entries = ArrayList<LibraryEntry>(); val errors = HashMap<String, String>()
-            for ((id, r) in results) {
-                r.onSuccess { entries += LibraryScanner.merge(id, it, prev.entries, now) }
-                    .onFailure { e -> errors[id] = e.message ?: e.javaClass.simpleName; entries += prev.entries.filter { it.serverId == id } } // keep old on error
-            }
-            val data = LibraryData(entries, now, errors)
-            _state.value = LibraryState(data)
-            file?.let { f -> runCatching { f.writeText(encode(data)) } }
+            _state.update { it.copy(errors = errors) }
+            setUpdated(System.currentTimeMillis())
         } finally {
-            if (_state.value.scanning) _state.value = _state.value.copy(scanning = false)
+            _state.update { it.copy(scanning = false) }
         }
     }
 
-    fun clear() { _state.value = LibraryState(); file?.delete() }
+    /** Upserts batches as they are found; stale rows are deleted only after a complete scan. */
+    private suspend fun scanServer(srv: ServerConfig, repo: RemoteFileRepository, roots: List<String>, depth: Int, hidden: Boolean) {
+        val dao = db.dao()
+        val scanId = System.nanoTime()
+        val known = dao.known(srv.id).associateBy { it.path }
+        val now = System.currentTimeMillis()
+        LibraryScanner.scan(srv, repo, roots, depth, hidden,
+            onFolder = { folders, files -> _state.update { st -> st.copy(progress = st.progress + (srv.id to ServerProgress(srv.name, folders, files))) } },
+            onBatch = { batch ->
+                dao.upsert(batch.distinctBy { it.path }.map { f ->
+                    val p = f.path.trim('/'); val k = known[p]
+                    LibraryRows.of(srv.id, p, f.name, f.size, f.modified, k?.addedAt ?: f.modified.takeIf { it > 0 } ?: now, scanId, k?.id ?: 0)
+                })
+            })
+        dao.deleteStale(srv.id, scanId)
+    }
+
+    suspend fun clear() { db.dao().clear(); prefs?.edit()?.remove("updatedAt")?.apply(); _state.value = LibraryState() }
 }

@@ -182,4 +182,9 @@
     <string name="library_roots">Root folders</string>
     <string name="library_roots_help">One folder per line (e.g. Movies or Films/New). Empty = whole server. Applies to all servers; missing folders are skipped.</string>
     <string name="library_clear">Clear library</string>
+    <string name="library_cancel">Stop</string>
+    <string name="library_progress_fmt">Servers: %1$d of %2$d · videos found: %3$d</string>
+    <string name="library_server_progress_fmt">%1$s: folders %2$d, videos %3$d</string>
+    <string name="library_total_fmt">Found: %1$d</string>
+    <string name="library_updated_fmt">Updated %1$s</string>
 </resources>
