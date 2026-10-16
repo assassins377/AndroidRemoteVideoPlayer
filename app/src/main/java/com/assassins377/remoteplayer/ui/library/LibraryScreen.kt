@@ -1,6 +1,9 @@
 package com.assassins377.remoteplayer.ui.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,7 +39,7 @@ import java.util.Date
 private const val PAGE = 200
 
 /** Combined library: FTS search (debounced), SQL sort/filter, LIMIT-based paging, scan progress with cancel. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (String) -> Unit = {}) {
     val st by LibraryStore.state.collectAsStateWithLifecycle()
@@ -59,6 +62,13 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
     }.collectAsStateWithLifecycle(initialValue = emptyList())
     val total by remember(query, filter, live, mode) { dao.observeCount(LibrarySql.count(query, filter, live, mode)) }.collectAsStateWithLifecycle(initialValue = 0)
     val listState = rememberLazyListState()
+    val favs by com.assassins377.remoteplayer.settings.FavoritesStore.items.collectAsStateWithLifecycle()
+    var details by remember { mutableStateOf<Triple<String, com.assassins377.remoteplayer.data.RemoteFile, Pair<com.assassins377.remoteplayer.meta.ParsedTitle?, com.assassins377.remoteplayer.meta.TmdbMeta?>>?>(null) }
+    details?.let { (sid, f, pm) ->
+        com.assassins377.remoteplayer.ui.browser.DetailsSheet(sid, f, pm.first, pm.second,
+            onPlay = { details = null; ServerStore.get(sid)?.let { srv -> onPlay(ServerStore.repositoryFor(srv.type).playbackUri(srv, f)) } },
+            onDismiss = { details = null })
+    }
     LaunchedEffect(listState, list) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.distinctUntilChanged().collect { last ->
             val n = list?.size ?: 0
@@ -151,8 +161,21 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
                                     Text("/" + e.path, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall)
                                 }
                             },
-                            trailingContent = { AssistChip(onClick = { serverFilter = server.id }, label = { Text(server.name, maxLines = 1) }) },
-                            modifier = Modifier.clickable { if (query.isNotBlank()) RecentSearches.add(query); onPlay(ServerStore.repositoryFor(server.type).playbackUri(server, f)) },
+                            trailingContent = {
+                                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    val starred = favs.any { it.serverId == e.serverId && it.path.trim('/') == e.path }
+                                    IconButton(onClick = { com.assassins377.remoteplayer.settings.FavoritesStore.toggle(com.assassins377.remoteplayer.settings.Favorite(e.serverId, e.path, e.name, false)) }) {
+                                        Icon(if (starred) Icons.Default.Star else Icons.Default.StarBorder,
+                                            stringResource(if (starred) R.string.remove_favorite else R.string.add_favorite),
+                                            tint = if (starred) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                                    }
+                                    AssistChip(onClick = { serverFilter = server.id }, label = { Text(server.name, maxLines = 1) })
+                                }
+                            },
+                            modifier = Modifier.combinedClickable(
+                                onClick = { if (query.isNotBlank()) RecentSearches.add(query); onPlay(ServerStore.repositoryFor(server.type).playbackUri(server, f)) },
+                                onLongClick = { details = Triple(e.serverId, f, p to m) },
+                            ),
                         )
                     }
                 }
