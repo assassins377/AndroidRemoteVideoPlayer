@@ -20,6 +20,7 @@ object Routes {
     fun editServer(id: String? = null) = if (id == null) "servers/edit" else "servers/edit?id=${Uri.encode(id)}"
     const val BROWSER = "browser/{serverId}?path={path}"
     const val FAVORITES = "favorites"
+    const val LIBRARY = "library"
     const val PLAYER = "player?uri={uri}"
     fun browser(serverId: String, path: String = "") = "browser/${Uri.encode(serverId)}?path=${Uri.encode(path)}"
     fun player(uri: String) = "player?uri=${Uri.encode(uri)}"
@@ -36,12 +37,19 @@ fun AppNavGraph() {
                 onOpen = { nav.navigate(Routes.browser(it.id)) },
                 onSettings = { nav.navigate(Routes.SETTINGS) },
                 onFavorites = { nav.navigate(Routes.FAVORITES) },
+                onLibrary = { nav.navigate(Routes.LIBRARY) },
                 onPlay = { uri -> nav.navigate(Routes.player(uri)) },
             )
         }
         composable(Routes.FAVORITES) {
             com.assassins377.remoteplayer.ui.home.FavoritesScreen(
                 onOpenFolder = { f -> nav.navigate(Routes.browser(f.serverId, f.path)) },
+                onPlay = { uri -> nav.navigate(Routes.player(uri)) },
+                onBack = { nav.popBackStack() },
+            )
+        }
+        composable(Routes.LIBRARY) {
+            com.assassins377.remoteplayer.ui.library.LibraryScreen(
                 onPlay = { uri -> nav.navigate(Routes.player(uri)) },
                 onBack = { nav.popBackStack() },
             )

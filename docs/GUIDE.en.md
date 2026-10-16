@@ -253,6 +253,12 @@ Subtitle timing offset is not supported yet (Media3 limitation).
 ### Posters & titles (TMDB)
 See section 7.
 
+### Library
+- **Refresh library on app start** — refreshes the library in the background every time the app starts (off by default).
+- **Folder search depth** — how many levels of subfolders to walk (default 5).
+- **Root folders** — which folders to index, one per line (e.g. `Movies`). Empty = whole server. Applies to all servers; folders that don't exist on a server are skipped. Tap **Save**; **Refresh library** is next to it.
+- **Clear library** — deletes the saved list (files on the server are not touched).
+
 ### Data
 - **Clear cache**: deletes temporary files and the TMDB cache, and closes SMB connections.
 - **Clear watch history**: erases saved positions and Continue watching.
@@ -286,6 +292,18 @@ Supported formats are `.srt`, `.ass`, `.ssa`, and `.vtt`. A language code after 
 - **Favourites**: in the file list, tap the star on the right: **Add to favourites** or **Remove from favourites**. Both files and folders can be starred. Open the list with **★** on the **Servers** screen. When it's empty, it says "Nothing yet. Star files and folders to add them." The star isn't shown in Grid mode, so switch to the list.
 - **Continue watching**: the **Servers** screen shows a row of unfinished videos with progress bars above the server list. Tap one to resume. The ✕ (**Remove from history**) removes it from the row.
 - **Search**: in a folder, tap the magnifier (**Search**) and type in "Search in folder". It searches the current folder only. When nothing matches, it says "Nothing found". Tap ✕ to close the search.
+
+### Library: all servers together
+
+You can add several servers of different types (SMB, WebDAV, HTTP) at once — each one separately. The **Library** button (film-strip icon) on the **Servers** screen opens one combined list of videos from all servers.
+
+- The first time, tap **Refresh library** (arrow at the top). The app walks the folders of every server in the background and remembers the videos it finds. The list is stored on the phone, so afterwards it opens instantly, even offline (playback still needs the server).
+- Each video shows the cleaned title and TMDB poster (if TMDB is on) and a badge with the server name on the right. Tapping the badge shows only that server.
+- **Search all servers** searches titles across the whole library.
+- Sort: **Title**, **Year**, **Date added**. Filter: **All servers** or one server.
+- Tapping a video plays it in the normal player and resumes where you stopped.
+- If a server can't be reached, an error with its name appears below the search field and its old entries stay in the library.
+- New files appear only after a refresh (button, or automatically on start — see Settings).
 
 ## 11. Export and import servers
 

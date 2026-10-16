@@ -91,3 +91,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }
+
+// JVM unit/Robolectric tests run on the debug variant only (Compose UI tests need the debug-only
+// ui-test-manifest); debugMin/release unit-test tasks would just duplicate them, so `./gradlew test` stays green.
+androidComponents {
+    beforeVariants { v -> if (v.buildType != "debug") v.enableUnitTest = false }
+}

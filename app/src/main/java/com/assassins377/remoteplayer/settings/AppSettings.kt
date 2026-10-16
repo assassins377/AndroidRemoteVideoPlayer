@@ -47,6 +47,11 @@ data class AppSettings(
     val tmdbEnabled: Boolean = false,
     /** Keystore-encrypted API key/token (see TmdbRepository). */
     val tmdbKeyEnc: String = "",
+    // Library
+    val libraryRefreshOnStart: Boolean = false,
+    val libraryMaxDepth: Int = 5,
+    /** Root folders to index, one per line ("" = whole share / base URL). */
+    val libraryRoots: String = "",
 ) {
     val seekStepMs: Long get() = seekStepSec * 1000L
     val readAheadBytes: Int get() = readAheadKb * 1024
@@ -56,6 +61,7 @@ data class AppSettings(
         val SEEK_STEPS = listOf(10, 15, 30)
         val READ_AHEAD_KB = listOf(256, 512, 1024, 2048, 4096)
         val BUFFER_SEC = listOf(30, 60, 120, 300)
+        val LIBRARY_DEPTHS = listOf(1, 2, 3, 5, 8, 12)
         val SUB_SIZES = listOf(14, 16, 20, 24, 28, 34)
 
         /** Builds settings from raw stored values; unknown/invalid values fall back to defaults. */
@@ -99,6 +105,9 @@ data class AppSettings(
                 horizontalSeek = b("horizontalSeek", d.horizontalSeek),
                 tmdbEnabled = b("tmdbEnabled", d.tmdbEnabled),
                 tmdbKeyEnc = s("tmdbKeyEnc", d.tmdbKeyEnc),
+                libraryRefreshOnStart = b("libraryRefreshOnStart", d.libraryRefreshOnStart),
+                libraryMaxDepth = i("libraryMaxDepth", d.libraryMaxDepth) { it in 0..30 },
+                libraryRoots = s("libraryRoots", d.libraryRoots),
             )
         }
     }
