@@ -6,6 +6,7 @@
 
 ## ✨ Новое / What's new
 
+- Задержка субтитров для каждого файла / Per-file subtitle delay
 - Сериалы: сезоны/серии, отметки «просмотрено», следующая серия с отсчётом / Series grouping, watched marks, up-next countdown
 ## 📥 Скачать / Download
 

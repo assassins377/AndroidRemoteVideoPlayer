@@ -197,4 +197,7 @@
     <string name="mark_unwatched">Mark as unwatched</string>
     <string name="up_next_fmt">Next episode in %1$d s</string>
     <string name="up_next_play">Play now</string>
+    <string name="sub_delay_fmt">External subtitle delay: %1$s</string>
+    <string name="sub_delay_reset">Reset delay</string>
+    <string name="sec_unit">s</string>
 </resources>

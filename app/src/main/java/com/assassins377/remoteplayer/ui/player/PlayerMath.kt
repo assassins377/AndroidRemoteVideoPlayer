@@ -32,4 +32,12 @@ object PlayerMath {
     }
 
     fun rational(p: Pair<Int, Int>) = Rational(p.first, p.second)
+
+    /** "+0,5 с" / "−1,2 с" / "0 с". */
+    fun formatDelay(ms: Long): String {
+        val sign = if (ms > 0) "+" else if (ms < 0) "−" else ""
+        val v = kotlin.math.abs(ms)
+        val txt = if (v % 1000 == 0L) "${v / 1000}" else String.format(java.util.Locale.ROOT, "%.1f", v / 1000.0).replace('.', ',')
+        return "$sign$txt " + com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.sec_unit, "с")
+    }
 }

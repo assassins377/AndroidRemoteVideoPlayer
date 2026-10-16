@@ -313,6 +313,10 @@ In **Library**, choose **Series**: episodes of one show are grouped into one car
 - When an episode ends (with "Autoplay next" on), a card "Next episode in N s" appears with **Play now** and **Cancel**. The next episode comes from the library in season/episode order, otherwise the next file in the folder.
 - After updating the app, tap **Refresh library** once: the database format changed.
 
+### Subtitle delay
+In the player tap **Tracks**. If the video has external subtitles (.srt/.vtt/.ass next to it), there is "External subtitle delay" with −0.5 / −0.1 / +0.1 / +0.5 s buttons. "+" shows subtitles later. The value is remembered per file; **Reset delay** sets it back to 0. Changing it reloads the video at the same position for a moment.
+Limitations: embedded (MKV) subtitles and audio cannot be shifted (not supported by the Media3 player).
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.
