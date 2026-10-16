@@ -1,45 +1,39 @@
 # Android Remote Video Player
 
-Android application for browsing and streaming videos stored on a PC or file server (SMB/CIFS, HTTP, WebDAV).
+**RU:** Android-плеер для видео с компьютера или NAS в домашней сети: SMB (Windows, Samba, Synology/QNAP), WebDAV, HTTP. Плеер на Media3 с жестами, дорожками, PiP и звуком в фоне, внешние субтитры, постеры TMDB, избранное, «Продолжить просмотр».
 
-## Features
+**EN:** Android player for videos on your PC or NAS over the home network: SMB (Windows, Samba, Synology/QNAP), WebDAV, HTTP. Media3 player with gestures, track selection, PiP and background audio, external subtitles, TMDB posters, favourites, Continue watching.
 
-- Browse folders and files on local network / file servers
-- Support for **SMB/CIFS** shares (Windows, Samba, NAS)
-- Direct HTTP/HTTPS video playback
-- Modern video player based on **Media3 / ExoPlayer**
-- Subtitle support, playback controls, seek, speed
-- Material 3 UI with Jetpack Compose
-- Dark / Light theme
+## 📥 Скачать / Download
 
-## Tech Stack
+Последний APK — на странице **[Releases](https://github.com/assassins377/AndroidRemoteVideoPlayer/releases)** (Android 8.0+).
+Get the latest APK from **[Releases](https://github.com/assassins377/AndroidRemoteVideoPlayer/releases)** (Android 8.0+).
 
-| Component       | Technology                     |
-|-----------------|--------------------------------|
-| Language        | Kotlin                         |
-| UI              | Jetpack Compose + Material 3   |
-| Video Player    | AndroidX Media3 (ExoPlayer)    |
-| SMB Client      | smbj                           |
-| Architecture    | MVVM + Coroutines + Flow       |
-| Navigation      | Navigation Compose             |
+## 📖 Руководство / Guide
 
-## Recommended Dependencies
+- 🇷🇺 [Руководство пользователя (установка, подключение серверов, настройки, FAQ)](docs/GUIDE.ru.md)
+- 🇬🇧 [User guide (installation, connecting servers, settings, FAQ)](docs/GUIDE.en.md)
 
-Add to `app/build.gradle.kts`:
+История изменений / Changelog: [CHANGELOG.md](CHANGELOG.md)
 
-```kotlin
-dependencies {
-    // Media3 / ExoPlayer
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
-    implementation("androidx.media3:media3-ui:1.5.1")
+## 🛠 Сборка / Building
 
-    // SMB
-    implementation("com.hierynomus:smbj:0.13.0")
+| Component | Technology |
+|---|---|
+| Language | Kotlin |
+| UI | Jetpack Compose + Material 3 |
+| Player | AndroidX Media3 (ExoPlayer, MediaSession) |
+| SMB | smbj |
+| WebDAV / HTTP | OkHttp |
+| Storage | DataStore, Android Keystore |
 
-    // Compose
-    implementation(platform("androidx.compose:compose-bom:2025.10.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.activity:activity-compose")
-    implementation("androidx.navigation:navigation-compose")
-}
+```bash
+./gradlew assembleDebug testDebugUnitTest lintDebug   # debug APK + tests (Robolectric, no emulator)
+./gradlew assembleRelease                             # R8-minified; signed if KEYSTORE_FILE/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD are set
+```
+
+Requires JDK 17 and Android SDK 36.
+
+## License
+
+See [LICENSE](LICENSE).
