@@ -6,6 +6,7 @@
 
 ## ✨ Новое / What's new
 
+- Android TV: лаунчер, пульт, сетка / Android TV support
 - Карточка фильма: актёры, жанры, трейлер / Details: cast, genres, trailer
 - Кадры из видео, если нет постера / Video frame thumbnails
 - Задержка субтитров для каждого файла / Per-file subtitle delay

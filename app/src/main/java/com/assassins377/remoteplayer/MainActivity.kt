@@ -8,6 +8,8 @@ import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import com.assassins377.remoteplayer.nav.AppNavGraph
 import com.assassins377.remoteplayer.settings.Locales
 import com.assassins377.remoteplayer.settings.SettingsStore
@@ -23,7 +25,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { RemotePlayerTheme { AppNavGraph() } }
+        val tv = com.assassins377.remoteplayer.ui.theme.Tv.isTv(this)
+        setContent {
+            RemotePlayerTheme {
+                // TV: keep content inside the overscan-safe area (5 % / 48×27 dp).
+                androidx.compose.foundation.layout.Box(if (tv) androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 27.dp) else androidx.compose.ui.Modifier) { AppNavGraph() }
+            }
+        }
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
