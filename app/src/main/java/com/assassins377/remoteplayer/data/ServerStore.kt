@@ -71,7 +71,11 @@ object ServerStore {
 
     fun exportJson(): String = ServerTransfer.encode(_servers.value)
 
-    fun repositoryFor(type: ServerType): RemoteFileRepository = when (type) {
+    /** Test hook: replaces real repositories (Robolectric UI tests). */
+    @androidx.annotation.VisibleForTesting
+    var repositoryOverride: ((ServerType) -> RemoteFileRepository)? = null
+
+    fun repositoryFor(type: ServerType): RemoteFileRepository = repositoryOverride?.invoke(type) ?: when (type) {
         ServerType.SMB -> SmbRepository()
         ServerType.HTTP -> HttpRepository()
         ServerType.WEBDAV -> WebDavRepository()
