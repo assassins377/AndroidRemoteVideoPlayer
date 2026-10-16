@@ -155,8 +155,13 @@ class RoutingDataSourceFactory(private val default: DataSource.Factory) : DataSo
         private fun httpSource(dataSpec: DataSpec): Pair<DataSource, DataSpec> {
             val (id, path) = HttpUri.parse(dataSpec.uri.toString()) ?: throw IOException("Bad HTTP playback uri")
             val server = ServerStore.get(id) ?: throw IOException("Unknown server $id")
-            val url = if (path.isEmpty()) server.host else UrlPaths.join(server.host, path)
-            val ds = OkHttpDataSource.Factory(HttpClients.forServer(server)).createDataSource()
+            val jf = server.type == com.assassins377.remoteplayer.data.ServerType.JELLYFIN
+            val url = when {
+                jf -> com.assassins377.remoteplayer.data.JellyfinRepository().resolveStream(server, path)
+                path.isEmpty() -> server.host
+                else -> UrlPaths.join(server.host, path)
+            }
+            val ds = OkHttpDataSource.Factory(HttpClients.forServer(if (jf) server.copy(username = "", password = "") else server)).createDataSource()
             listeners.forEach(ds::addTransferListener)
             return ds to dataSpec.withUri(Uri.parse(url))
         }

@@ -126,7 +126,7 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
                         selected = type == t,
                         onClick = { type = t; vm.resetTest() },
                         shape = SegmentedButtonDefaults.itemShape(i, ServerType.entries.size),
-                    ) { Text(t.name) }
+                    ) { Text(if (t == ServerType.JELLYFIN) "Jellyfin" else t.name, maxLines = 1) }
                 }
             }
             OutlinedTextField(name, { name = it }, label = { Text(stringResource(com.assassins377.remoteplayer.R.string.name)) }, modifier = Modifier.fillMaxWidth())

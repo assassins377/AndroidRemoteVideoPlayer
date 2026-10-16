@@ -79,5 +79,6 @@ object ServerStore {
         ServerType.SMB -> SmbRepository()
         ServerType.HTTP -> HttpRepository()
         ServerType.WEBDAV -> WebDavRepository()
+        ServerType.JELLYFIN -> JellyfinRepository()
     }
 }

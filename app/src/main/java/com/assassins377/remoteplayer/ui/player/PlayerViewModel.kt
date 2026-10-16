@@ -196,7 +196,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun markWatched(uri: String) {
         val ref = PlaybackRef.parse(uri) ?: return
-        com.assassins377.remoteplayer.settings.WatchedStore.set(com.assassins377.remoteplayer.settings.WatchedStore.key(ref.serverId, ref.path), true)
+        val k = com.assassins377.remoteplayer.settings.WatchedStore.key(ref.serverId, ref.path)
+        if (!com.assassins377.remoteplayer.settings.WatchedStore.isWatched(k)) com.assassins377.remoteplayer.settings.WatchedStore.markByUser(k, true)
     }
 
     /** Next episode from the library (series order), else next video in the folder; shown with a countdown. */
