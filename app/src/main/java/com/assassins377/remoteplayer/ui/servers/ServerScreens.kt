@@ -81,6 +81,7 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
     var user by remember { mutableStateOf(existing?.username ?: "") }
     var pass by remember { mutableStateOf(existing?.password ?: "") }
     var domain by remember { mutableStateOf(existing?.domain ?: "") }
+    var pin by remember { mutableStateOf(existing?.pinnedCertSha256 ?: "") }
     var confirmDelete by remember { mutableStateOf(false) }
     val test by vm.test.collectAsStateWithLifecycle()
     val shares by vm.shares.collectAsStateWithLifecycle()
@@ -88,6 +89,7 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
 
     fun current() = ServerConfig(
         existing?.id ?: "", name.ifBlank { host.trim() }, type, host.trim(), share.trim(), user.trim(), pass, domain.trim(),
+        pinnedCertSha256 = if (type == ServerType.SMB) "" else pin,
     )
     val valid = host.isNotBlank() && (type != ServerType.SMB || share.isNotBlank())
 
@@ -132,7 +134,7 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
                     onLoad = { vm.loadShares(current().copy(id = "__shares__")) },
                 )
             }
-            if (type != ServerType.HTTP) {
+            run { // Basic/Digest for HTTP and WebDAV, NTLM for SMB
                 OutlinedTextField(user, { user = it; vm.resetTest() }, label = { Text("Пользователь (пусто = гость)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
                     pass, { pass = it; vm.resetTest() }, label = { Text("Пароль") },
@@ -153,7 +155,16 @@ fun ServerEditScreen(serverId: String?, onDone: () -> Unit, vm: ServersViewModel
                 TestState.Idle -> {}
                 TestState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 TestState.Ok -> Text("Подключение успешно", color = MaterialTheme.colorScheme.primary)
-                is TestState.Failed -> Text("Ошибка: ${t.message}", color = MaterialTheme.colorScheme.error)
+                is TestState.Failed -> {
+                    Text("Ошибка: ${t.message}", color = MaterialTheme.colorScheme.error)
+                    t.cert?.let { c -> CertCard(c) { pin = c.sha256; vm.testConnection(current()) } }
+                }
+            }
+            if (pin.isNotBlank() && type != ServerType.SMB) {
+                Text("Доверенный сертификат (SHA-256): " + pin.uppercase().chunked(2).take(8).joinToString(":") + "…",
+                    style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { pin = ""; vm.resetTest() }) { Text("Забыть сертификат") }
+                Text("Изменение вступит в силу после «Сохранить».", style = MaterialTheme.typography.bodySmall)
             }
         }
     }

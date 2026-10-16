@@ -17,6 +17,10 @@ import com.assassins377.remoteplayer.data.SmbErrorKind
 import com.assassins377.remoteplayer.data.SmbErrors
 import com.assassins377.remoteplayer.data.SmbPool
 import com.assassins377.remoteplayer.data.SmbUri
+import com.assassins377.remoteplayer.data.HttpUri
+import com.assassins377.remoteplayer.data.HttpClients
+import com.assassins377.remoteplayer.data.UrlPaths
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
@@ -139,10 +143,24 @@ class RoutingDataSourceFactory(private val default: DataSource.Factory) : DataSo
             fallback.addTransferListener(transferListener)
         }
         override fun open(dataSpec: DataSpec): Long {
-            val ds = if (dataSpec.uri.scheme == SmbUri.SCHEME) SmbDataSource().also { s -> listeners.forEach(s::addTransferListener) } else fallback
+            val (ds, spec) = when (dataSpec.uri.scheme) {
+                SmbUri.SCHEME -> SmbDataSource().also { s -> listeners.forEach(s::addTransferListener) } to dataSpec
+                HttpUri.SCHEME -> httpSource(dataSpec)
+                else -> fallback to dataSpec
+            }
             active = ds
-            return ds.open(dataSpec)
+            return ds.open(spec)
         }
+        /** rvp-http://id/path → real URL + per-server OkHttp client (Basic/Digest). Range seeking is done by OkHttpDataSource. */
+        private fun httpSource(dataSpec: DataSpec): Pair<DataSource, DataSpec> {
+            val (id, path) = HttpUri.parse(dataSpec.uri.toString()) ?: throw IOException("Bad HTTP playback uri")
+            val server = ServerStore.get(id) ?: throw IOException("Unknown server $id")
+            val url = if (path.isEmpty()) server.host else UrlPaths.join(server.host, path)
+            val ds = OkHttpDataSource.Factory(HttpClients.forServer(server)).createDataSource()
+            listeners.forEach(ds::addTransferListener)
+            return ds to dataSpec.withUri(Uri.parse(url))
+        }
+
         override fun read(buffer: ByteArray, offset: Int, length: Int) = active!!.read(buffer, offset, length)
         override fun getUri(): Uri? = active?.uri
         override fun getResponseHeaders(): Map<String, List<String>> = active?.responseHeaders ?: emptyMap()

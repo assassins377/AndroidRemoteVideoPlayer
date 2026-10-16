@@ -54,7 +54,9 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
+    implementation(libs.okhttp)
+    implementation(libs.media3.datasource.okhttp)
+    testImplementation(libs.mockwebserver)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-    // TODO WebDAV: implementation("com.github.thegrizzlylabs:sardine-android:0.9") (JitPack)
 }

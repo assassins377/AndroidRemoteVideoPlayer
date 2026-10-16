@@ -40,7 +40,7 @@ object SettingsStore {
             flow.collect { new ->
                 val old = _settings.value
                 _settings.value = new
-                if (networkChanged(old, new)) SmbPool.invalidateAll()
+                if (networkChanged(old, new)) { SmbPool.invalidateAll(); com.assassins377.remoteplayer.data.HttpClients.invalidateAll() }
             }
         }
     }

@@ -6,6 +6,7 @@ import com.assassins377.remoteplayer.data.ServerConfig
 import com.assassins377.remoteplayer.data.ServerStore
 import com.assassins377.remoteplayer.data.ServerType
 import com.assassins377.remoteplayer.data.SmbRepository
+import com.assassins377.remoteplayer.data.WebDavRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +19,7 @@ sealed interface TestState {
     data object Idle : TestState
     data object Running : TestState
     data object Ok : TestState
-    data class Failed(val message: String) : TestState
+    data class Failed(val message: String, val cert: com.assassins377.remoteplayer.data.CertInfo? = null) : TestState
 }
 
 sealed interface SharesState {
@@ -66,11 +67,11 @@ class ServersViewModel : ViewModel() {
                 withTimeout(15_000) {
                     when (server.type) {
                         ServerType.SMB -> SmbRepository().testConnection(server.copy(id = server.id.ifBlank { "__test__" }))
-                        ServerType.HTTP -> httpHead(server.host)
-                        ServerType.WEBDAV -> error("WebDAV пока не поддерживается")
+                        ServerType.HTTP -> com.assassins377.remoteplayer.data.HttpRepository().testConnection(server.copy(id = server.id.ifBlank { "__test__" }))
+                        ServerType.WEBDAV -> WebDavRepository().testConnection(server.copy(id = server.id.ifBlank { "__test__" }))
                     }
                 }
-            }.fold({ TestState.Ok }, { TestState.Failed(it.message ?: it.toString()) })
+            }.fold({ TestState.Ok }, { TestState.Failed(it.message ?: it.toString(), com.assassins377.remoteplayer.data.CertInfo.from(it)) })
         }
     }
 

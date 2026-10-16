@@ -18,6 +18,8 @@ data class ServerConfig(
     /** Never serialized to plain storage; kept encrypted by [SecretStore]. */
     @kotlinx.serialization.Transient val password: String = "",
     val domain: String = "",
+    /** HTTPS: SHA-256 of a user-trusted (e.g. self-signed) server certificate; "" = system CAs only. */
+    val pinnedCertSha256: String = "",
 )
 
 data class RemoteFile(
