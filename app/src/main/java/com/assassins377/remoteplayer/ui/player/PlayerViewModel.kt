@@ -29,6 +29,14 @@ import com.assassins377.remoteplayer.settings.ResumeStore
 import com.assassins377.remoteplayer.settings.SettingsStore
 import com.assassins377.remoteplayer.settings.SubtitleMatcher
 import kotlinx.coroutines.delay
+import android.content.ComponentName
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.assassins377.remoteplayer.player.PlaybackService
+import com.assassins377.remoteplayer.player.PlayerHolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,6 +82,11 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     private val _speed = MutableStateFlow(settings.defaultSpeed)
     val speed: StateFlow<Float> = _speed.asStateFlow()
     private var currentUri: String? = null
+    private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<MediaController>? = null
+    private val _tracks = MutableStateFlow(TrackOptions())
+    val tracks: StateFlow<TrackOptions> = _tracks.asStateFlow()
+    private val _videoSize = MutableStateFlow(0 to 0)
+    val videoSize: StateFlow<Pair<Int, Int>> = _videoSize.asStateFlow()
 
     init {
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
@@ -101,6 +114,28 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             }
         })
         viewModelScope.launch { while (isActive) { delay(10_000); savePosition() } }
+        // MediaSession + notification: connecting a controller starts/binds PlaybackService.
+        PlayerHolder.player = player
+        controllerFuture = runCatching {
+            MediaController.Builder(app, SessionToken(app, ComponentName(app, PlaybackService::class.java))).buildAsync()
+        }.getOrNull()
+        player.addListener(object : Player.Listener {
+            override fun onTracksChanged(tracks: Tracks) { _tracks.value = TrackOptions.from(tracks) }
+            override fun onVideoSizeChanged(videoSize: VideoSize) { _videoSize.value = videoSize.width to videoSize.height }
+        })
+    }
+
+
+    /** Select an audio/text track; [option] null for text = subtitles off. */
+    fun selectTrack(type: Int, option: TrackOption?) {
+        val b = player.trackSelectionParameters.buildUpon()
+        if (option == null) {
+            b.setTrackTypeDisabled(type, true)
+        } else {
+            b.setTrackTypeDisabled(type, false)
+                .setOverrideForType(TrackSelectionOverride(player.currentTracks.groups[option.groupIndex].mediaTrackGroup, option.trackIndex))
+        }
+        player.trackSelectionParameters = b.build()
     }
 
     fun retry() {
@@ -169,5 +204,10 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun seekBy(deltaMs: Long) = player.seekTo((player.currentPosition + deltaMs).coerceAtLeast(0))
 
-    override fun onCleared() { savePosition(); player.release() }
+    override fun onCleared() {
+        savePosition()
+        controllerFuture?.let { MediaController.releaseFuture(it) }
+        PlayerHolder.detach()
+        player.release()
+    }
 }

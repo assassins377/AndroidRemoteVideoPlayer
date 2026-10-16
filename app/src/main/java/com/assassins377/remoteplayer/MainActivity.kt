@@ -26,12 +26,18 @@ class MainActivity : ComponentActivity() {
         setContent { RemotePlayerTheme { AppNavGraph() } }
     }
 
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        PipState.inPip.value = isInPictureInPictureMode
+    }
+
     /** PiP when the user presses Home during playback (if enabled in settings). */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (PipState.playing && SettingsStore.current.pipOnMinimize) {
+        // Android 12+ enters PiP automatically (setAutoEnterEnabled); older versions do it here.
+        if (Build.VERSION.SDK_INT < 31 && PipState.playing && SettingsStore.current.pipOnMinimize) {
             runCatching {
-                enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build())
+                enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(PipState.aspect.first, PipState.aspect.second)).build())
             }
         }
     }

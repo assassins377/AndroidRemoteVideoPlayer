@@ -85,4 +85,11 @@
     <string name="tmdb_tv">Сериал</string>
     <string name="tmdb_search">Найти</string>
     <string name="tmdb_no_results">Ничего не найдено</string>
+    <string name="horizontal_seek">Горизонтальный свайп — перемотка</string>
+    <string name="background_audio">Звук в фоне (при сворачивании)</string>
+    <string name="tracks">Дорожки</string>
+    <string name="audio_tracks">Аудио</string>
+    <string name="subtitle_tracks">Субтитры</string>
+    <string name="subs_off">Выключены</string>
+    <string name="close">Закрыть</string>
 </resources>
