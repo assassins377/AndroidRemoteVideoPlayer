@@ -6,6 +6,7 @@
 
 ## ✨ Новое / What's new
 
+- Карточка фильма: актёры, жанры, трейлер / Details: cast, genres, trailer
 - Кадры из видео, если нет постера / Video frame thumbnails
 - Задержка субтитров для каждого файла / Per-file subtitle delay
 - Сериалы: сезоны/серии, отметки «просмотрено», следующая серия с отсчётом / Series grouping, watched marks, up-next countdown

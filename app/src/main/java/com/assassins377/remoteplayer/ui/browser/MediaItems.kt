@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
@@ -154,7 +155,10 @@ fun DetailsSheet(serverId: String, f: RemoteFile, p: ParsedTitle?, m: TmdbMeta?,
                         style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
             }
-            meta?.overview?.takeIf { it.isNotBlank() }?.let { Text(it) }
+            val details by produceState<com.assassins377.remoteplayer.meta.TmdbDetails?>(null, meta?.id) {
+                value = meta?.let { mm -> runCatching { TmdbRepository.details(mm.id, p?.isSeries == true || ov?.tv == true) }.getOrNull() }
+            }
+            DetailsExtra(details, meta?.overview.orEmpty())
             Text(stringResource(R.string.file_name) + ": " + f.name, style = MaterialTheme.typography.bodySmall)
             if (!f.isDirectory) Button(onClick = onPlay, modifier = Modifier.fillMaxWidth()) { Text("▶") }
             if (p != null) {
@@ -228,4 +232,38 @@ fun MatchDialog(p: ParsedTitle, onPick: (TmdbMeta, Boolean) -> Unit, onDismiss: 
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.back)) } },
     )
+}
+
+/** Tagline, genres/runtime, overview, cast row and trailer button from TMDB details. */
+@Composable
+fun DetailsExtra(d: com.assassins377.remoteplayer.meta.TmdbDetails?, fallbackOverview: String) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    d?.tagline?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
+    if (d != null) {
+        val info = listOfNotNull(d.genres.takeIf { it.isNotEmpty() }?.joinToString(", "),
+            d.runtimeMin?.let { stringResource(R.string.runtime_fmt, it) }, d.seasons?.let { stringResource(R.string.seasons_fmt, it) }).joinToString(" · ")
+        if (info.isNotBlank()) Text(info, style = MaterialTheme.typography.bodySmall)
+    }
+    (d?.overview?.takeIf { it.isNotBlank() } ?: fallbackOverview.takeIf { it.isNotBlank() })?.let { Text(it) }
+    if (d != null && d.cast.isNotEmpty()) {
+        Text(stringResource(R.string.cast), style = MaterialTheme.typography.titleSmall)
+        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(d.cast.size) { i ->
+                val c = d.cast[i]
+                Column(Modifier.width(80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val url = c.photoUrl()
+                    if (url != null) AsyncImage(url, c.name, Modifier.size(64.dp, 96.dp).clip(MaterialTheme.shapes.small), contentScale = ContentScale.Crop)
+                    else Box(Modifier.size(64.dp, 96.dp), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null) }
+                    Text(c.name, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (c.character.isNotBlank()) Text(c.character, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+    d?.trailerUrl?.let { url ->
+        OutlinedButton(onClick = {
+            runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.trailer)) }
+    }
 }

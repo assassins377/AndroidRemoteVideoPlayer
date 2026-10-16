@@ -201,4 +201,8 @@
     <string name="sub_delay_reset">Reset delay</string>
     <string name="sec_unit">s</string>
     <string name="video_thumbnails">Frame from video when there is no poster</string>
+    <string name="runtime_fmt">%1$d min</string>
+    <string name="seasons_fmt">%1$d seasons</string>
+    <string name="cast">Cast</string>
+    <string name="trailer">▶ Trailer (YouTube)</string>
 </resources>
