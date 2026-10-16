@@ -64,4 +64,25 @@
     <string name="imported_fmt">Импортировано серверов: %d. Введите пароли заново.</string>
     <string name="import_failed">Не удалось импортировать файл</string>
     <string name="lang_any">Любой</string>
+    <string name="sec_tmdb">Постеры и названия (TMDB)</string>
+    <string name="tmdb_enabled">Загружать постеры и названия</string>
+    <string name="tmdb_key">Ключ API TMDB (v3) или токен (v4)</string>
+    <string name="tmdb_key_set">Ключ сохранён (зашифрован)</string>
+    <string name="tmdb_key_none">Ключ не задан</string>
+    <string name="tmdb_save">Сохранить ключ</string>
+    <string name="tmdb_remove">Удалить ключ</string>
+    <string name="tmdb_help">Ключ бесплатный: зарегистрируйтесь на themoviedb.org → Настройки → API → создать ключ (Developer). Язык названий берётся из языка приложения.</string>
+    <string name="details">Подробнее</string>
+    <string name="file_name">Файл</string>
+    <string name="tmdb_wrong_match">Не тот фильм?</string>
+    <string name="tmdb_reset_auto">Вернуть автоматический выбор</string>
+    <string name="tmdb_hide">Показывать без TMDB</string>
+    <string name="tmdb_manual_badge">Выбрано вручную</string>
+    <string name="tmdb_hidden_badge">TMDB отключён для этого файла</string>
+    <string name="tmdb_query">Название</string>
+    <string name="tmdb_year">Год</string>
+    <string name="tmdb_movie">Фильм</string>
+    <string name="tmdb_tv">Сериал</string>
+    <string name="tmdb_search">Найти</string>
+    <string name="tmdb_no_results">Ничего не найдено</string>
 </resources>
