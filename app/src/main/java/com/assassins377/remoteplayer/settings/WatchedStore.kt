@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -35,8 +36,23 @@ object WatchedStore {
         val next = if (watched) cur + key else cur - key
         if (next == cur) return
         _items.value = next
-        val f = file ?: return; val json = Json.encodeToString(next.toList())
-        scope.launch { runCatching { f.writeText(json) } }
+        persist()
+    }
+
+    /** Applies many marks at once with a single write. */
+    @Synchronized fun setAll(marks: Map<String, Boolean>) {
+        val cur = _items.value
+        val next = cur.toMutableSet().apply { marks.forEach { (k, w) -> if (w) add(k) else remove(k) } }.toSet()
+        if (next == cur) return
+        _items.value = next
+        persist()
+    }
+
+    private val writer = kotlinx.coroutines.sync.Mutex()
+    /** Serialized, atomic (temp + rename) write of the latest snapshot. */
+    private fun persist() {
+        val f = file ?: return
+        scope.launch { writer.withLock { runCatching { AtomicFiles.write(f, Json.encodeToString(_items.value.toList())) } } }
     }
     fun toggle(key: String) = set(key, !isWatched(key)).also { onUserChange?.invoke(key, isWatched(key)) }
 

@@ -1,5 +1,6 @@
 package com.assassins377.remoteplayer.ui.library
 
+import kotlinx.coroutines.flow.catch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Star
@@ -63,9 +64,11 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
     val total by remember(query, filter, live, mode) { dao.observeCount(LibrarySql.count(query, filter, live, mode)) }.collectAsStateWithLifecycle(initialValue = 0)
     val listState = rememberLazyListState()
     val favs by com.assassins377.remoteplayer.settings.FavoritesStore.items.collectAsStateWithLifecycle()
-    var details by remember { mutableStateOf<Triple<String, com.assassins377.remoteplayer.data.RemoteFile, Pair<com.assassins377.remoteplayer.meta.ParsedTitle?, com.assassins377.remoteplayer.meta.TmdbMeta?>>?>(null) }
-    details?.let { (sid, f, pm) ->
-        com.assassins377.remoteplayer.ui.browser.DetailsSheet(sid, f, pm.first, pm.second,
+    // Only the selection is kept; metadata is derived reactively so a lookup finishing later fills the sheet.
+    var details by remember { mutableStateOf<Pair<String, com.assassins377.remoteplayer.data.RemoteFile>?>(null) }
+    details?.let { (sid, f) ->
+        val (dp, dm) = com.assassins377.remoteplayer.ui.browser.rememberMeta(f, settings, sid)
+        com.assassins377.remoteplayer.ui.browser.DetailsSheet(sid, f, dp, dm,
             onPlay = { details = null; ServerStore.get(sid)?.let { srv -> onPlay(ServerStore.repositoryFor(srv.type).playbackUri(srv, f)) } },
             onDismiss = { details = null })
     }
@@ -98,9 +101,11 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
             }
             var focused by remember { mutableStateOf(false) }
             val recent by RecentSearches.items.collectAsStateWithLifecycle()
-            val suggestions by produceState(emptyList<String>(), query, live) {
-                value = LibrarySql.suggestions(query, live)?.let { q -> runCatching { dao.strings(q) }.getOrDefault(emptyList()) }.orEmpty()
-            }
+            // Same filters as the list; re-emits as scan batches arrive.
+            val suggestions by remember(query, live, filter, mode) {
+                LibrarySql.suggestions(query, live, servers = filter, mode = mode)?.let { q -> dao.observeStrings(q).catch { emit(emptyList()) } }
+                    ?: kotlinx.coroutines.flow.flowOf(emptyList())
+            }.collectAsStateWithLifecycle(initialValue = emptyList())
             OutlinedTextField(input, { input = it }, placeholder = { Text(stringResource(R.string.library_search_hint)) },
                 singleLine = true,
                 trailingIcon = { if (input.isNotEmpty()) IconButton(onClick = { input = "" }) { Icon(Icons.Default.Close, stringResource(R.string.clear)) } },
@@ -143,7 +148,7 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
             when {
                 mode == LibraryMode.SERIES -> if (seriesList.isEmpty() && !st.scanning) Text(stringResource(R.string.library_nothing_found), Modifier.padding(24.dp))
                     else LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                        items(seriesList, key = { it.seriesKey }) { sr -> SeriesItem(sr, settings) { onOpenSeries(sr.seriesKey) } }
+                        items(seriesList, key = { it.seriesKey }) { sr -> SeriesItem(sr, settings) { if (query.isNotBlank()) RecentSearches.add(query); onOpenSeries(sr.seriesKey) } }
                     }
                 rows == null -> {}
                 rows.isEmpty() && !st.scanning -> Text(stringResource(if (query.isBlank() && serverFilter == null) R.string.library_empty else R.string.library_nothing_found), Modifier.padding(24.dp))
@@ -174,7 +179,7 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
                             },
                             modifier = Modifier.combinedClickable(
                                 onClick = { if (query.isNotBlank()) RecentSearches.add(query); onPlay(ServerStore.repositoryFor(server.type).playbackUri(server, f)) },
-                                onLongClick = { details = Triple(e.serverId, f, p to m) },
+                                onLongClick = { details = e.serverId to f },
                             ),
                         )
                     }

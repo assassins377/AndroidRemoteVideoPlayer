@@ -82,6 +82,8 @@ interface LibraryDao {
     @RawQuery suspend fun queryCount(q: SupportSQLiteQuery): Int
 
     @RawQuery suspend fun strings(q: SupportSQLiteQuery): List<String>
+    @RawQuery(observedEntities = [EntryRow::class])
+    fun observeStrings(q: SupportSQLiteQuery): Flow<List<String>>
 }
 
 @Database(entities = [EntryRow::class, EntryFts::class], version = 2, exportSchema = false)
@@ -101,11 +103,11 @@ object LibrarySql {
 
     /** FTS MATCH expression: every word as a prefix ("брат* 1997*"); null when the query has no words. */
     fun match(query: String): String? {
-        // "quoted phrase" → FTS phrase (last word as prefix); other words → AND of prefixes.
+        // "quoted phrase" → exact FTS phrase; other words → AND of prefixes.
         val parts = mutableListOf<String>()
         var rest = query
         Regex("\"([^\"]+)\"").findAll(query).forEach { m ->
-            val w = words(m.groupValues[1]); if (w.isNotEmpty()) parts += "\"" + w.joinToString(" ") + "*\""
+            val w = words(m.groupValues[1]); if (w.isNotEmpty()) parts += "\"" + w.joinToString(" ") + "\""
             rest = rest.replace(m.value, " ")
         }
         words(rest.replace("\"", " ")).forEach { parts += "$it*" }
@@ -115,16 +117,16 @@ object LibrarySql {
     private fun words(s: String) = normalize(s).split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
 
     /** Distinct title suggestions for the current input. */
-    fun suggestions(query: String, live: Collection<String>, limit: Int = 8): SupportSQLiteQuery? {
-        val m = match(query) ?: return null
-        val args = mutableListOf<Any>(); args.addAll(live); args += m
-        return SimpleSQLiteQuery("SELECT COALESCE(seriesTitle, title) FROM entries WHERE serverId IN (${live.joinToString(",") { "?" }}) " +
-            "AND id IN (SELECT rowid FROM entries_fts WHERE entries_fts MATCH ?) GROUP BY COALESCE(seriesKey, titleSort) ORDER BY COALESCE(seriesTitle, titleSort) LIMIT $limit", args.toTypedArray())
+    fun suggestions(query: String, live: Collection<String>, limit: Int = 8, servers: Collection<String>? = null, mode: LibraryMode = LibraryMode.ALL): SupportSQLiteQuery? {
+        if (match(query) == null) return null
+        val args = mutableListOf<Any>()
+        return SimpleSQLiteQuery("SELECT COALESCE(seriesTitle, title) FROM entries WHERE ${where(query, servers, live, args, mode)} GROUP BY COALESCE(seriesKey, titleSort) ORDER BY COALESCE(seriesTitle, titleSort) LIMIT $limit", args.toTypedArray())
     }
 
     private fun where(query: String, servers: Collection<String>?, live: Collection<String>, args: MutableList<Any>, mode: LibraryMode = LibraryMode.ALL): String {
         val c = mutableListOf<String>()
         if (mode == LibraryMode.MOVIES) c += "seriesKey IS NULL"
+        if (mode == LibraryMode.SERIES) c += "seriesKey IS NOT NULL"
         c += "serverId IN (${live.joinToString(",") { "?" }})"; args.addAll(live)
         if (servers != null) { c += "serverId IN (${servers.joinToString(",") { "?" }})"; args.addAll(servers) }
         match(query)?.let { c += "id IN (SELECT rowid FROM entries_fts WHERE entries_fts MATCH ?)"; args += it }
@@ -144,7 +146,8 @@ object LibrarySql {
 
     fun count(query: String, servers: Collection<String>?, live: Collection<String>, mode: LibraryMode = LibraryMode.ALL): SupportSQLiteQuery {
         val args = mutableListOf<Any>()
-        return SimpleSQLiteQuery("SELECT COUNT(*) FROM entries WHERE ${where(query, servers, live, args, mode)}", args.toTypedArray())
+        val what = if (mode == LibraryMode.SERIES) "COUNT(DISTINCT seriesKey)" else "COUNT(*)"
+        return SimpleSQLiteQuery("SELECT $what FROM entries WHERE ${where(query, servers, live, args, mode)}", args.toTypedArray())
     }
 
     /** Series grouped by seriesKey (search/filter apply to episodes). */

@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import com.assassins377.remoteplayer.nav.AppNavGraph
 import com.assassins377.remoteplayer.settings.Locales
 import com.assassins377.remoteplayer.settings.SettingsStore
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.assassins377.remoteplayer.ui.player.PipState
 import com.assassins377.remoteplayer.ui.theme.RemotePlayerTheme
 
@@ -30,7 +32,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             RemotePlayerTheme {
                 // TV: keep content inside the overscan-safe area (5 % / 48×27 dp).
-                androidx.compose.foundation.layout.Box(if (tv) androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 27.dp) else androidx.compose.ui.Modifier) { AppNavGraph() }
+                // The player sets fullScreen so video uses the whole display.
+                val full by com.assassins377.remoteplayer.ui.theme.Tv.fullScreen.collectAsState()
+                androidx.compose.foundation.layout.Box(if (tv && !full) androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 27.dp) else androidx.compose.ui.Modifier) { AppNavGraph() }
             }
         }
     }

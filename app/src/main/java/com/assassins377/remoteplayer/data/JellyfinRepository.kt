@@ -18,7 +18,11 @@ class JellyfinRepository : RemoteFileRepository {
     data class Session(val userId: String, val token: String)
 
     companion object {
-        private val sessions = ConcurrentHashMap<String, Session>()
+        /** serverId → (config fingerprint, session): an edited server (host/user/password) logs in again. */
+        private val sessions = ConcurrentHashMap<String, Pair<String, Session>>()
+        fun fingerprint(server: ServerConfig) = listOf(server.host, server.username, server.password).joinToString("\u0000").let {
+            java.security.MessageDigest.getInstance("SHA-256").digest(it.toByteArray()).joinToString("") { b -> "%02x".format(b) }
+        }
         private const val CLIENT = "MediaBrowser Client=\"RemotePlayer\", Device=\"Android\", DeviceId=\"rvp-android\", Version=\"1.0\""
         fun invalidate(serverId: String) { sessions.remove(serverId) }
 
@@ -60,7 +64,7 @@ class JellyfinRepository : RemoteFileRepository {
     private fun client(server: ServerConfig): OkHttpClient = HttpClients.forServer(server.copy(username = "", password = ""))
 
     /** Blocking login (cached per server). */
-    fun session(server: ServerConfig): Session = sessions[server.id] ?: run {
+    fun session(server: ServerConfig): Session = sessions[server.id]?.takeIf { it.first == fingerprint(server) }?.second ?: run {
         val body = buildJsonObject { put("Username", server.username); put("Pw", server.password) }.toString()
         val req = Request.Builder().url(base(server) + "/Users/AuthenticateByName")
             .header("Authorization", CLIENT).header("X-Emby-Authorization", CLIENT)
@@ -70,7 +74,7 @@ class JellyfinRepository : RemoteFileRepository {
             HttpErrors.check(r)
             val o = Json.parseToJsonElement(r.body!!.string()).jsonObject
             Session(o["User"]!!.jsonObject["Id"]!!.jsonPrimitive.content, o["AccessToken"]!!.jsonPrimitive.content)
-        }.also { sessions[server.id] = it }
+        }.also { sessions[server.id] = fingerprint(server) to it }
     }
 
     private fun get(server: ServerConfig, url: String): String {
@@ -90,9 +94,9 @@ class JellyfinRepository : RemoteFileRepository {
             else "${base(server)}/Users/${s.userId}/Items?ParentId=$parent&Fields=MediaSources,UserData&SortBy=SortName"
             val parsed = parseItems(get(server, url), path)
             // Played state from Jellyfin → local watched marks.
-            parsed.forEach { (f, played) ->
-                if (!f.isDirectory && played != null) com.assassins377.remoteplayer.settings.WatchedStore.set(com.assassins377.remoteplayer.settings.WatchedStore.key(server.id, f.path), played)
-            }
+            com.assassins377.remoteplayer.settings.WatchedStore.setAll(parsed.mapNotNull { (f, played) ->
+                if (!f.isDirectory && played != null) com.assassins377.remoteplayer.settings.WatchedStore.key(server.id, f.path) to played else null
+            }.toMap())
             parsed.map { it.first }
         } catch (e: SmbError) { throw e } catch (e: Exception) { throw HttpErrors.wrap(e) }
     }
