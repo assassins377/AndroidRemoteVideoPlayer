@@ -158,7 +158,7 @@ fun DetailsSheet(serverId: String, f: RemoteFile, p: ParsedTitle?, m: TmdbMeta?,
                 }
             }
             val details by produceState<com.assassins377.remoteplayer.meta.TmdbDetails?>(null, meta?.id) {
-                value = meta?.let { mm -> runCatching { TmdbRepository.details(mm.id, p?.isSeries == true || ov?.tv == true) }.getOrNull() }
+                value = meta?.let { mm -> runCatching { TmdbRepository.details(mm.id, TmdbRepository.isTv(ov, p?.isSeries == true)) }.getOrNull() }
             }
             DetailsExtra(details, meta?.overview.orEmpty())
             Text(stringResource(R.string.file_name) + ": " + f.name, style = MaterialTheme.typography.bodySmall)
