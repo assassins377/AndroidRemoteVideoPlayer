@@ -43,7 +43,7 @@ fun FileBrowserScreen(
     val onClick = { f: RemoteFile -> if (f.isDirectory) vm.open(f.path) else vm.playbackUri(f)?.let(onPlay); Unit }
     var details by remember { mutableStateOf<Triple<RemoteFile, ParsedTitle?, TmdbMeta?>?>(null) }
     val onDetails = { f: RemoteFile, p: ParsedTitle?, m: TmdbMeta? -> details = Triple(f, p, m) }
-    details?.let { (f, p, m) -> DetailsSheet(f, p, m, onPlay = { details = null; onClick(f) }, onDismiss = { details = null }) }
+    details?.let { (f, p, m) -> DetailsSheet(serverId, f, p, m, onPlay = { details = null; onClick(f) }, onDismiss = { details = null }) }
     val goBack = { if (!vm.up()) onBack() }
     BackHandler(onBack = goBack)
 
@@ -66,10 +66,10 @@ fun FileBrowserScreen(
                     Button(onClick = vm::reload) { Text("Повторить") }
                 }
                 settings.grid -> LazyVerticalGrid(GridCells.Adaptive(120.dp), contentPadding = PaddingValues(8.dp)) {
-                    gridItems(files, key = { it.path }) { f -> FileCard(f, settings, { onClick(f) }, onDetails) }
+                    gridItems(files, key = { it.path }) { f -> FileCard(f, settings, serverId, { onClick(f) }, onDetails) }
                 }
                 else -> LazyColumn {
-                    items(files, key = { it.path }) { f -> FileRow(f, settings, { onClick(f) }, onDetails) }
+                    items(files, key = { it.path }) { f -> FileRow(f, settings, serverId, { onClick(f) }, onDetails) }
                 }
             }
         }

@@ -74,4 +74,15 @@
     <string name="tmdb_help">Free key: sign up at themoviedb.org → Settings → API → create key (Developer). Title language follows the app language.</string>
     <string name="details">Details</string>
     <string name="file_name">File</string>
+    <string name="tmdb_wrong_match">Wrong title?</string>
+    <string name="tmdb_reset_auto">Reset to automatic</string>
+    <string name="tmdb_hide">Show without TMDB</string>
+    <string name="tmdb_manual_badge">Chosen manually</string>
+    <string name="tmdb_hidden_badge">TMDB off for this item</string>
+    <string name="tmdb_query">Title</string>
+    <string name="tmdb_year">Year</string>
+    <string name="tmdb_movie">Movie</string>
+    <string name="tmdb_tv">TV series</string>
+    <string name="tmdb_search">Search</string>
+    <string name="tmdb_no_results">No results</string>
 </resources>

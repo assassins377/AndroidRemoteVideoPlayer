@@ -74,4 +74,15 @@
     <string name="tmdb_help">Ключ бесплатный: зарегистрируйтесь на themoviedb.org → Настройки → API → создать ключ (Developer). Язык названий берётся из языка приложения.</string>
     <string name="details">Подробнее</string>
     <string name="file_name">Файл</string>
+    <string name="tmdb_wrong_match">Не тот фильм?</string>
+    <string name="tmdb_reset_auto">Вернуть автоматический выбор</string>
+    <string name="tmdb_hide">Показывать без TMDB</string>
+    <string name="tmdb_manual_badge">Выбрано вручную</string>
+    <string name="tmdb_hidden_badge">TMDB отключён для этого файла</string>
+    <string name="tmdb_query">Название</string>
+    <string name="tmdb_year">Год</string>
+    <string name="tmdb_movie">Фильм</string>
+    <string name="tmdb_tv">Сериал</string>
+    <string name="tmdb_search">Найти</string>
+    <string name="tmdb_no_results">Ничего не найдено</string>
 </resources>

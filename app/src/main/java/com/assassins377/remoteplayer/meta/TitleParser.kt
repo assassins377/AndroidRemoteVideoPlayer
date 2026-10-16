@@ -9,8 +9,10 @@ data class ParsedTitle(
     val quality: String? = null,
     val season: Int? = null,
     val episode: Int? = null,
+    /** Folder parsed as a series (search TMDB tv even without SxxEyy). */
+    val forceTv: Boolean = false,
 ) {
-    val isSeries: Boolean get() = season != null
+    val isSeries: Boolean get() = season != null || forceTv
     val episodeTag: String? get() = if (season != null) "S%02d".format(season) + (episode?.let { "E%02d".format(it) } ?: "") else null
 
     /** "Title (Year)" or "Title S01E02". */
@@ -87,6 +89,25 @@ object TitleParser {
         if (title.isEmpty()) title = stem.ifEmpty { fileName }
         return ParsedTitle(title, year, quality, season, episode)
     }
+
+    /**
+     * Folder name as a series ("Breaking Bad", "Слово пацана (2023)", "The.Office.S02.1080p").
+     * Returns null for generic folder names that should not hit TMDB.
+     */
+    fun parseFolder(name: String): ParsedTitle? {
+        if (name.lowercase(Locale.ROOT) in GENERIC_FOLDERS || name.length < 3) return null
+        val p = parse(name)
+        val t = p.title.lowercase(Locale.ROOT)
+        if (t in GENERIC_FOLDERS || SEASON_DIR.matches(t)) return null
+        return p.copy(episode = null, forceTv = true)
+    }
+
+    private val SEASON_DIR = Regex("""^(season|сезон|s)\s*\d+$""")
+    private val GENERIC_FOLDERS = setOf(
+        "movies", "movie", "films", "film", "video", "videos", "tv", "series", "shows", "tv shows", "anime", "cartoons",
+        "фильмы", "кино", "видео", "сериалы", "мультфильмы", "мульты", "аниме", "downloads", "загрузки", "torrents",
+        "extras", "featurettes", "subs", "subtitles", "sample", "samples", "media", "public", "share", "new", "новое",
+    )
 
     /** Human-readable size with auto unit (Б/КБ/МБ/ГБ/ТБ), binary multiples. */
     fun formatSize(bytes: Long, units: List<String> = listOf("Б", "КБ", "МБ", "ГБ", "ТБ")): String {

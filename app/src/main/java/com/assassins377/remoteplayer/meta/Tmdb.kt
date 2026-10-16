@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -68,11 +69,12 @@ class TmdbCache(
 
 /** TMDB API v3 search. Key: v3 API key (32 hex) or v4 read access token (JWT, "eyJ..."). */
 class TmdbClient(private val key: String, private val language: String) {
-    fun search(p: ParsedTitle): TmdbMeta? {
-        val tv = p.isSeries
-        val q = URLEncoder.encode(p.title, "UTF-8")
+    fun search(p: ParsedTitle): TmdbMeta? = searchAll(p.title, p.year, p.isSeries).firstOrNull()
+
+    fun searchAll(title: String, year: Int?, tv: Boolean): List<TmdbMeta> {
+        val q = URLEncoder.encode(title, "UTF-8")
         var url = "https://api.themoviedb.org/3/search/${if (tv) "tv" else "movie"}?query=$q&language=$language&include_adult=false"
-        if (p.year != null) url += if (tv) "&first_air_date_year=${p.year}" else "&year=${p.year}"
+        if (year != null) url += if (tv) "&first_air_date_year=$year" else "&year=$year"
         val bearer = isBearer(key)
         if (!bearer) url += "&api_key=" + URLEncoder.encode(key, "UTF-8")
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -84,7 +86,7 @@ class TmdbClient(private val key: String, private val language: String) {
             val code = conn.responseCode
             if (code == 401) throw TmdbAuthException()
             if (code !in 200..299) throw IOException("TMDB HTTP $code")
-            return parseSearch(conn.inputStream.use { it.readBytes().decodeToString() }, tv)
+            return parseSearchAll(conn.inputStream.use { it.readBytes().decodeToString() }, tv)
         } finally { conn.disconnect() }
     }
 
@@ -92,8 +94,12 @@ class TmdbClient(private val key: String, private val language: String) {
         fun isBearer(key: String) = key.startsWith("eyJ") || key.length > 40
 
         /** First result of a /search response, or null. */
-        fun parseSearch(body: String, tv: Boolean): TmdbMeta? {
-            val r = Json.parseToJsonElement(body).jsonObject["results"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
+        fun parseSearch(body: String, tv: Boolean): TmdbMeta? = parseSearchAll(body, tv).firstOrNull()
+
+        fun parseSearchAll(body: String, tv: Boolean): List<TmdbMeta> =
+            Json.parseToJsonElement(body).jsonObject["results"]?.jsonArray.orEmpty().mapNotNull { parseResult(it.jsonObject, tv) }
+
+        private fun parseResult(r: JsonObject, tv: Boolean): TmdbMeta? {
             fun JsonObject.str(k: String) = this[k]?.jsonPrimitive?.contentOrNull
             val date = r.str(if (tv) "first_air_date" else "release_date").orEmpty()
             return TmdbMeta(
@@ -129,6 +135,9 @@ object TmdbRepository {
         file = File(ctx.filesDir, "tmdb_cache.json").also { f ->
             if (f.exists()) runCatching { cache.loadJson(f.readText()) }
         }
+        overridesFile = File(ctx.filesDir, "tmdb_overrides.json").also { f ->
+            if (f.exists()) runCatching { overrides.loadJson(f.readText()) }
+        }
     }
 
     fun encryptKey(plain: String): String = if (plain.isBlank()) "" else secrets.encrypt(plain.trim())
@@ -149,6 +158,33 @@ object TmdbRepository {
     }
 
     fun cached(p: ParsedTitle): TmdbMeta? = cache.get(keyFor(p))?.meta
+
+    // ---- Manual overrides (separate file; NOT removed by clearCache) ----
+    private val overrides = OverrideStore()
+    private var overridesFile: File? = null
+    private val _overridesVersion = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val overridesVersion: kotlinx.coroutines.flow.StateFlow<Int> = _overridesVersion
+
+    fun override(fileKey: String): TmdbOverride? = overrides.get(fileKey)
+
+    fun setOverride(fileKey: String, o: TmdbOverride?) {
+        overrides.set(fileKey, o)
+        _overridesVersion.value++
+        val f = overridesFile ?: return
+        val json = overrides.toJson()
+        bgScope.launch { runCatching { f.writeText(json) } }
+    }
+
+    private val bgScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /** Manual search for the correction dialog. Throws on network/auth errors. */
+    suspend fun search(query: String, year: Int?, tv: Boolean): List<TmdbMeta> {
+        val s = SettingsStore.current
+        if (s.tmdbKeyEnc.isBlank()) throw IOException("Ключ TMDB не задан")
+        return withContext(Dispatchers.IO) {
+            TmdbClient(decryptKey(s.tmdbKeyEnc), language(s.language)).searchAll(query, year, tv)
+        }
+    }
 
     private fun keyFor(p: ParsedTitle) = language(SettingsStore.current.language) + "|" + p.key
 
