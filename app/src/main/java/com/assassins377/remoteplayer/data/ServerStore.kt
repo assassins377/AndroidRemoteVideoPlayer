@@ -45,6 +45,7 @@ object ServerStore {
     suspend fun remove(id: String) {
         save { list -> list.filterNot { it.id == id } }
         SmbPool.invalidate(id)
+        com.assassins377.remoteplayer.settings.FavoritesStore.removeServer(id)
     }
 
     fun get(id: String): ServerConfig? = _servers.value.firstOrNull { it.id == id }

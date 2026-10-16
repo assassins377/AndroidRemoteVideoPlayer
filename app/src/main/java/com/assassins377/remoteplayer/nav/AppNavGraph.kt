@@ -18,9 +18,10 @@ object Routes {
     const val SETTINGS = "settings"
     const val EDIT_SERVER = "servers/edit?id={id}"
     fun editServer(id: String? = null) = if (id == null) "servers/edit" else "servers/edit?id=${Uri.encode(id)}"
-    const val BROWSER = "browser/{serverId}"
+    const val BROWSER = "browser/{serverId}?path={path}"
+    const val FAVORITES = "favorites"
     const val PLAYER = "player?uri={uri}"
-    fun browser(serverId: String) = "browser/$serverId"
+    fun browser(serverId: String, path: String = "") = "browser/${Uri.encode(serverId)}?path=${Uri.encode(path)}"
     fun player(uri: String) = "player?uri=${Uri.encode(uri)}"
 }
 
@@ -34,6 +35,15 @@ fun AppNavGraph() {
                 onEdit = { nav.navigate(Routes.editServer(it.id)) },
                 onOpen = { nav.navigate(Routes.browser(it.id)) },
                 onSettings = { nav.navigate(Routes.SETTINGS) },
+                onFavorites = { nav.navigate(Routes.FAVORITES) },
+                onPlay = { uri -> nav.navigate(Routes.player(uri)) },
+            )
+        }
+        composable(Routes.FAVORITES) {
+            com.assassins377.remoteplayer.ui.home.FavoritesScreen(
+                onOpenFolder = { f -> nav.navigate(Routes.browser(f.serverId, f.path)) },
+                onPlay = { uri -> nav.navigate(Routes.player(uri)) },
+                onBack = { nav.popBackStack() },
             )
         }
         composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }) }
@@ -43,9 +53,10 @@ fun AppNavGraph() {
         ) {
             ServerEditScreen(serverId = it.arguments?.getString("id"), onDone = { nav.popBackStack() })
         }
-        composable(Routes.BROWSER, arguments = listOf(navArgument("serverId") { type = NavType.StringType })) {
+        composable(Routes.BROWSER, arguments = listOf(navArgument("serverId") { type = NavType.StringType }, navArgument("path") { type = NavType.StringType; defaultValue = "" })) {
             FileBrowserScreen(
                 serverId = it.arguments?.getString("serverId").orEmpty(),
+                startPath = it.arguments?.getString("path").orEmpty(),
                 onPlay = { uri -> nav.navigate(Routes.player(uri)) },
                 onBack = { nav.popBackStack() },
             )

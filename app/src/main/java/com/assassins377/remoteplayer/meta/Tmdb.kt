@@ -115,7 +115,7 @@ class TmdbClient(private val key: String, private val language: String) {
     }
 }
 
-class TmdbAuthException : IOException("TMDB: неверный ключ API")
+class TmdbAuthException : IOException(com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.err_tmdb_key, "TMDB: неверный ключ API"))
 
 /**
  * Lookup with JSON file cache (TTL), in-flight de-duplication and max 3 parallel requests.
@@ -180,7 +180,7 @@ object TmdbRepository {
     /** Manual search for the correction dialog. Throws on network/auth errors. */
     suspend fun search(query: String, year: Int?, tv: Boolean): List<TmdbMeta> {
         val s = SettingsStore.current
-        if (s.tmdbKeyEnc.isBlank()) throw IOException("Ключ TMDB не задан")
+        if (s.tmdbKeyEnc.isBlank()) throw IOException(com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.err_tmdb_no_key, "Ключ TMDB не задан"))
         return withContext(Dispatchers.IO) {
             TmdbClient(decryptKey(s.tmdbKeyEnc), language(s.language)).searchAll(query, year, tv)
         }

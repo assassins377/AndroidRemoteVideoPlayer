@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 108dp adaptive foreground: screen with play triangle and a network "signal" arc (remote playback). Safe zone = central 66dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- screen -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M30,36h48a4,4 0 0 1 4,4v28a4,4 0 0 1 -4,4H30a4,4 0 0 1 -4,-4V40a4,4 0 0 1 4,-4z"/>
+    <!-- play triangle -->
+    <path android:fillColor="#E53935" android:pathData="M48,45L63,54L48,63Z"/>
+    <!-- stand -->
+    <path android:fillColor="#FFFFFF" android:pathData="M44,76h20v3H44z"/>
+    <!-- wifi arcs above the screen -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.5" android:strokeLineCap="round"
+        android:pathData="M47,30a10,10 0 0 1 14,0"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.5" android:strokeLineCap="round"
+        android:pathData="M43,26a16,16 0 0 1 22,0"/>
+</vector>

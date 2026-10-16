@@ -24,18 +24,18 @@ data class TrackOptions(val audio: List<TrackOption> = emptyList(), val text: Li
             return TrackOptions(audio, text)
         }
 
-        /** "Русский · Дубляж · 5.1" / "English · SRT" / "Дорожка 2". */
+        /** e.g. «Русский · Дубляж · 5.1», «English · SRT», «Дорожка 2». */
         fun label(f: Format, n: Int): String = labelOf(f.label, f.language, f.channelCount, f.sampleMimeType, n)
 
-        fun labelOf(label: String?, language: String?, channels: Int, mime: String?, n: Int): String {
+        fun labelOf(label: String?, language: String?, channels: Int, mime: String?, n: Int, ui: Locale = Locale.getDefault()): String {
             val parts = ArrayList<String>()
             language?.takeIf { it.isNotBlank() && it != "und" }?.let { tag ->
                 val loc = Locale.forLanguageTag(tag)
-                parts += loc.getDisplayLanguage(Locale("ru")).replaceFirstChar { it.titlecase(Locale("ru")) }.ifBlank { tag }
+                parts += loc.getDisplayLanguage(ui).replaceFirstChar { it.titlecase(ui) }.ifBlank { tag }
             }
             label?.takeIf { it.isNotBlank() && parts.none { p -> p.equals(it, true) } }?.let { parts += it }
             when {
-                channels in 1..2 -> parts += if (channels == 1) "моно" else "стерео"
+                channels in 1..2 -> parts += if (channels == 1) com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.mono, "моно") else com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.stereo, "стерео")
                 channels == 6 -> parts += "5.1"
                 channels == 8 -> parts += "7.1"
             }
@@ -45,7 +45,7 @@ data class TrackOptions(val audio: List<TrackOption> = emptyList(), val text: Li
                 "text/vtt" -> parts += "VTT"
                 "application/pgs" -> parts += "PGS"
             }
-            return if (parts.isEmpty()) "Дорожка $n" else parts.joinToString(" · ")
+            return if (parts.isEmpty()) com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.track_n, "Дорожка %d", n) else parts.joinToString(" · ")
         }
     }
 }

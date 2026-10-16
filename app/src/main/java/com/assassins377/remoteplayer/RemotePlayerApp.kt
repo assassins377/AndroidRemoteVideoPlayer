@@ -9,6 +9,8 @@ import com.assassins377.remoteplayer.settings.SettingsStore
 class RemotePlayerApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        AppStrings.context = this
+        com.assassins377.remoteplayer.settings.FavoritesStore.init(this)
         SettingsStore.init(this)
         ResumeStore.init(this)
         com.assassins377.remoteplayer.meta.TmdbRepository.init(this)
