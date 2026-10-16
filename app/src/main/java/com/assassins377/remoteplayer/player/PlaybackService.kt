@@ -11,6 +11,10 @@ import com.assassins377.remoteplayer.MainActivity
 
 /** Process-wide handle to the player owned by PlayerViewModel, so the service can expose it via MediaSession. */
 object PlayerHolder {
+    /** Keep playing after Back if the user intends playback (also while buffering). */
+    fun shouldContinue(playWhenReady: Boolean, state: Int) =
+        playWhenReady && state != androidx.media3.common.Player.STATE_ENDED && state != androidx.media3.common.Player.STATE_IDLE
+
     @Volatile var player: Player? = null
     internal var onRelease: (() -> Unit)? = null
 

@@ -38,6 +38,9 @@ class ContinueWidget : AppWidgetProvider() {
                 val it = items.getOrNull(i)
                 if (it == null) {
                     views.setTextViewText(id, if (i == 0) ctx.getString(R.string.widget_empty) else "")
+                    // Replace any intent left from a previous render (host may reapply onto the old layout).
+                    views.setOnClickPendingIntent(id, PendingIntent.getActivity(ctx, 100 + i, Intent(ctx, MainActivity::class.java),
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
                 } else {
                     val pct = it.progress?.let { p -> " · ${(p * 100).toInt()}%" }.orEmpty()
                     views.setTextViewText(id, "▶ ${it.title}$pct")

@@ -36,7 +36,13 @@ object Routes {
 fun AppNavGraph() {
     val nav = rememberNavController()
     val pending by com.assassins377.remoteplayer.ContinueWidget.pendingPlay.collectAsState()
-    LaunchedEffect(pending) { pending?.let { nav.navigate(Routes.player(it)); com.assassins377.remoteplayer.ContinueWidget.pendingPlay.value = null } }
+    LaunchedEffect(pending) {
+        pending?.let {
+            // Replace an open/retained player screen so its player is released, not left playing.
+            nav.navigate(Routes.player(it)) { popUpTo(Routes.PLAYER) { inclusive = true } }
+            com.assassins377.remoteplayer.ContinueWidget.pendingPlay.value = null
+        }
+    }
     NavHost(navController = nav, startDestination = Routes.SERVERS) {
         composable(Routes.SERVERS) {
             ServerListScreen(

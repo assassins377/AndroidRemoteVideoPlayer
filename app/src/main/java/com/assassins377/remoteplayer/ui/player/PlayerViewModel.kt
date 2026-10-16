@@ -285,7 +285,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         savePosition()
-        if (settings.backgroundAudio && player.isPlaying) {
+        // Intent, not isPlaying: Back during a rebuffer must keep playing too.
+        if (settings.backgroundAudio && PlayerHolder.shouldContinue(player.playWhenReady, player.playbackState)) {
             // Back pressed: keep playing in the background (notification controls stay).
             val future = controllerFuture
             PlayerHolder.keepInBackground(player, savePosition = { savePosition() }) {

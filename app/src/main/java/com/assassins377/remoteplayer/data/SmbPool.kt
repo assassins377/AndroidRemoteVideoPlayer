@@ -94,7 +94,7 @@ object SmbHost {
     const val DEFAULT_PORT = 445
     fun parse(s: String): Pair<String, Int> {
         val t = s.trim().removePrefix("smb://").trimEnd('/')
-        Regex("""^\[(.+)](?::(\d+))?$""").matchEntire(t)?.let { return it.groupValues[1] to (it.groupValues[2].toIntOrNull() ?: DEFAULT_PORT) }
+        Regex("""^\[(.+)](?::(\d+))?$""").matchEntire(t)?.let { return it.groupValues[1] to (it.groupValues[2].toIntOrNull()?.takeIf { p -> p in 1..65535 } ?: DEFAULT_PORT) }
         val parts = t.split(':')
         return if (parts.size == 2) parts[0] to (parts[1].toIntOrNull()?.takeIf { it in 1..65535 } ?: DEFAULT_PORT) else t to DEFAULT_PORT
     }
