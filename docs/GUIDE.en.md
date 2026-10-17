@@ -341,6 +341,9 @@ Limitations: the playback position is not sent to Jellyfin (resume works in the 
 ### Search: suggestions and phrases
 In library search all words must match, by prefix (`star war 1977`). A quoted phrase must match in order: `"star wars"`. Title suggestions appear below the field (episodes collapse into the series name) — tap to use one. With an empty field, recent searches are shown; **Clear** removes them. Case doesn't matter.
 
+### Favourites and title fixes in the Library
+Each video in **Library** has a star (**Add to favourites**). A long press opens the film card: overview, cast, trailer, **Download to device**, and **Wrong film?** — pick the correct TMDB entry or show without TMDB. The fix applies in folders and in the library.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

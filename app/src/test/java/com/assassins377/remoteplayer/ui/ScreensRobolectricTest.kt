@@ -170,3 +170,32 @@ class LibraryScreenRobolectricTest {
         assertEquals("fake://Брат.1997.720p.mkv", played)
     }
 }
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = TestApp::class, qualifiers = "ru")
+class LibraryActionsRobolectricTest {
+    @get:Rule val compose = createComposeRule()
+
+    @Test fun starAndDetailsFromLibrary() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        com.assassins377.remoteplayer.AppStrings.context = app
+        SettingsStore.init(app); runCatching { ServerStore.init(app, PlainSecrets) }
+        com.assassins377.remoteplayer.settings.FavoritesStore.init(app)
+        com.assassins377.remoteplayer.library.LibraryStore.init(app, com.assassins377.remoteplayer.library.LibraryDatabase.inMemory(app))
+        val fake = FakeRepo(); ServerStore.repositoryOverride = { fake }
+        runBlocking {
+            ServerStore.servers.value.forEach { ServerStore.remove(it.id) }
+            ServerStore.upsert(ServerConfig("s1", "Мой NAS", ServerType.SMB, "h", "media"))
+            com.assassins377.remoteplayer.library.LibraryStore.refreshNow()
+            assertEquals("servers=${ServerStore.servers.value} st=${com.assassins377.remoteplayer.library.LibraryStore.state.value}", 3,
+                com.assassins377.remoteplayer.library.LibraryStore.db.dao().count())
+        }
+        compose.setContent { com.assassins377.remoteplayer.ui.library.LibraryScreen(onPlay = {}, onBack = {}) }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Inception (2010)").fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodesWithContentDescription("В избранное")[0].performClick()
+        compose.waitUntil(5_000) { com.assassins377.remoteplayer.settings.FavoritesStore.items.value.size == 1 }
+        assertEquals("Movies/Inception.2010.mkv", com.assassins377.remoteplayer.settings.FavoritesStore.items.value.single().path)
+        compose.onNodeWithText("Inception (2010)").performTouchInput { longClick() }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Не тот фильм?").fetchSemanticsNodes().isNotEmpty() }
+    }
+}
