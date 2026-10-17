@@ -1,0 +1,45 @@
+# DRAFT metadata for https://gitlab.com/fdroid/fdroiddata (metadata/com.assassins377.remoteplayer.yml).
+# Not submitted. The `fdroid` product flavor first exists after the F-Droid readiness PR, so the first
+# buildable tag is the next release after v1.2.0 — update versionName/versionCode/commit when it is tagged.
+Categories:
+  - Multimedia
+License: Apache-2.0
+AuthorName: assassins377
+SourceCode: https://github.com/assassins377/AndroidRemoteVideoPlayer
+IssueTracker: https://github.com/assassins377/AndroidRemoteVideoPlayer/issues
+Changelog: https://github.com/assassins377/AndroidRemoteVideoPlayer/blob/HEAD/CHANGELOG.md
+
+AutoName: Remote Video Player
+
+# TMDB (posters/details) is an optional, off-by-default-without-key non-free network service.
+AntiFeatures:
+  NonFreeNet:
+    en-US: Optional movie posters and details from The Movie Database (TMDB) with a user-supplied API key.
+    ru-RU: Необязательные постеры и описания фильмов из The Movie Database (TMDB) с ключом API пользователя.
+
+RepoType: git
+Repo: https://github.com/assassins377/AndroidRemoteVideoPlayer.git
+# Reproducible builds: F-Droid publishes the developer-signed APK if its own build matches it byte for byte (minus signature).
+Binaries: https://github.com/assassins377/AndroidRemoteVideoPlayer/releases/download/v%v/AndroidRemoteVideoPlayer-%v-fdroid-release.apk
+
+Builds:
+  - versionName: 1.3.0
+    versionCode: 13
+    commit: v1.3.0
+    subdir: app
+    sudo:
+      - apt-get update
+      - apt-get install -y -t bookworm-backports openjdk-17-jdk-headless
+      - update-alternatives --auto java
+    gradle:
+      - fdroid
+    prebuild:
+      # The desktop (Compose for Desktop) module is not needed for the Android build.
+      - sed -i -e 's/, ":desktop"//' ../settings.gradle.kts
+
+AllowedAPKSigningKeys: 91e8379e523d0c9e99249bc509e89bbf527ebb3db45a70de96121856c707e054
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9.]+$
+CurrentVersion: 1.3.0
+CurrentVersionCode: 13

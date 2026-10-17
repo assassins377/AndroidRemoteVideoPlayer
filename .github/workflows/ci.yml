@@ -24,12 +24,12 @@ jobs:
           packages: ''
       - uses: gradle/actions/setup-gradle@v4
       - name: Build, unit tests (incl. Robolectric UI), lint
-        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest :shared:jvmTest :desktop:test lintDebug
+        run: ./gradlew --no-daemon assembleDebug testFullDebugUnitTest testFdroidDebugUnitTest :shared:jvmTest :desktop:test lintFullDebug lintFdroidDebug
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/*/debug/*.apk
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -37,5 +37,5 @@ jobs:
           name: reports
           path: |
             app/build/reports/tests/
-            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-*.html
           if-no-files-found: ignore

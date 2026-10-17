@@ -1,0 +1,1 @@
+Shared Kotlin Multiplatform core (Room KMP library index, no reindex needed). Linux desktop app released alongside.

@@ -1,0 +1,1 @@
+Play videos from your PC or NAS over SMB, WebDAV, HTTP and Jellyfin

@@ -1,0 +1,1 @@
+Видео с компьютера или NAS по SMB, WebDAV, HTTP и Jellyfin

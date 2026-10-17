@@ -41,6 +41,14 @@ android {
             signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
+    // full: Google Cast (media3-cast → Play services, non-free). fdroid: no proprietary dependencies, DLNA-only casting.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("full") { dimension = "distribution"; isDefault = true }
+        create("fdroid") { dimension = "distribution" }
+    }
+    // F-Droid/reproducible builds: no Google-encrypted dependency metadata blob in the APK.
+    dependenciesInfo { includeInApk = false; includeInBundle = false }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -88,7 +96,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(platform(libs.compose.bom))
-    implementation(libs.media3.cast)
+    "fullImplementation"(libs.media3.cast)
     implementation(libs.work.runtime)
     implementation(project(":shared"))
     testImplementation(libs.work.testing)

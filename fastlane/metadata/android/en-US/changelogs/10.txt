@@ -1,0 +1,1 @@
+First stable release: R8-minified release build, CI, Robolectric UI tests.

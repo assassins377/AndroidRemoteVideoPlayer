@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Добавлено
+- Подготовка к F-Droid: флейвор `fdroid` без Google Cast/Play services (трансляция только DLNA) и флейвор `full` по умолчанию; метаданные fastlane (RU/EN, описания, скриншоты, changelogs по versionCode); черновик рецепта fdroiddata и заметки о воспроизводимой сборке в `docs/fdroid/`; `dependenciesInfo` отключён. Релизный workflow прикладывает подписанный `...-fdroid-release.apk`.
+
 ## [1.2.0] — 2026-10-17
 
 ### Добавлено

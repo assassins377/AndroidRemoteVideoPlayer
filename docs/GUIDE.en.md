@@ -410,3 +410,6 @@ The "Download" button on a video in the folder browser queues it (one at a time,
 
 ### Casting (Linux)
 The "Cast" button in the player discovers DLNA/UPnP renderers (TVs, set-top boxes, Kodi, gmediarender) via SSDP and sends the video through a LAN-reachable local HTTP proxy (random port, random-token URLs; allow incoming connections in your firewall). Controls: pause, seek, stop (returns to local playback at the same position). Chromecast is not supported yet.
+
+## Build without proprietary components (F-Droid)
+Releases contain two APKs: the regular one (`...-release.apk`, Chromecast via Google Play services) and `...-fdroid-release.apk` without any Google components; it casts to DLNA devices only. Both are signed with the same key. F-Droid preparation is described in `docs/fdroid/README.md`.
