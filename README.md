@@ -44,9 +44,9 @@ Get the latest APK from **[Releases](https://github.com/assassins377/AndroidRemo
 **Modules:** `app` — Android UI/player; `shared` — Kotlin Multiplatform (Android + JVM): SMB/WebDAV/HTTP/Jellyfin clients, TMDB client + cache, title/series parsing, library index and search. Platform glue: `CoreSettings`, `CoreStrings` (strings by resource name), `KeyValue`.
 
 ```bash
-./gradlew assembleDebug testDebugUnitTest lintDebug   # debug APK + tests (Robolectric, no emulator)
+./gradlew assembleDebug testFullDebugUnitTest lintFullDebug   # debug APKs (full + fdroid) + tests (Robolectric, no emulator)
 ./gradlew :shared:jvmTest                             # shared module on the desktop JVM (bundled SQLite)
-./gradlew assembleRelease                             # R8-minified; signed if KEYSTORE_FILE/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD are set
+./gradlew assembleFullRelease assembleFdroidRelease    # R8-minified; signed if KEYSTORE_FILE/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD are set
 ```
 
 Requires JDK 17 and Android SDK 36.
@@ -65,6 +65,9 @@ The `desktop` module (Compose for Desktop) shares the `shared` module with the A
 - Extra libvlc args: `REMOTEPLAYER_VLC_ARGS`.
 - Run from source: `./gradlew :desktop:run`.
 
+## F-Droid
+
+Product flavors `full` (Google Cast) and `fdroid` (no proprietary dependencies, DLNA-only casting); fastlane metadata in `fastlane/metadata/android`; draft fdroiddata recipe and reproducible-build notes in [docs/fdroid](docs/fdroid/README.md).
 ## Windows
 
 MSI installer and portable zip are built on `windows-latest` (see `.github/workflows/desktop.yml`) and attached to release drafts. Requires 64-bit VLC 3.x. Details: docs/GUIDE.en.md.

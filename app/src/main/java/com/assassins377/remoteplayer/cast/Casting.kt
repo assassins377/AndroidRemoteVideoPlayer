@@ -1,19 +1,6 @@
 package com.assassins377.remoteplayer.cast
 
 import android.content.Context
-import androidx.annotation.OptIn
-import androidx.media3.cast.CastPlayer
-import androidx.media3.cast.SessionAvailabilityListener
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.util.UnstableApi
-import androidx.mediarouter.media.MediaRouteSelector
-import androidx.mediarouter.media.MediaRouter
-import com.google.android.gms.cast.CastMediaControlIntent
-import com.google.android.gms.cast.framework.CastContext
-import com.google.android.gms.cast.framework.CastOptions
-import com.google.android.gms.cast.framework.OptionsProvider
-import com.google.android.gms.cast.framework.SessionProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,58 +9,44 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Default Media Receiver; no custom receiver app needed. */
-class CastOptionsProvider : OptionsProvider {
-    override fun getCastOptions(context: Context): CastOptions =
-        CastOptions.Builder().setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID).build()
-    override fun getAdditionalSessionProviders(context: Context): List<SessionProvider>? = null
+/**
+ * Chromecast backend. The `full` flavor implements it with media3-cast / Google Cast (non-free Play services);
+ * the `fdroid` flavor ships a no-op so the app has no proprietary dependencies there.
+ */
+interface ChromecastBackend {
+    val supported: Boolean
+    fun startDiscovery(ctx: Context, onRoutes: (List<CastTarget.Chromecast>) -> Unit)
+    fun stopDiscovery(ctx: Context)
+    /** Returns an error text, or null when casting started. */
+    fun cast(ctx: Context, target: CastTarget.Chromecast, url: String, mime: String, title: String, positionMs: Long, onEnded: () -> Unit): String?
+    /** True if a Chromecast session handled the toggle. */
+    fun togglePause(): Boolean
+    fun stop(ctx: Context)
 }
 
 sealed class CastTarget(val name: String) {
-    class Chromecast(val route: MediaRouter.RouteInfo) : CastTarget(route.name)
+    /** [handle] is the flavor-specific route object. */
+    class Chromecast(name: String, val handle: Any) : CastTarget(name)
     class Dlna(val renderer: DlnaRenderer) : CastTarget(renderer.name)
 }
 
 data class CastState(val devices: List<CastTarget> = emptyList(), val searching: Boolean = false, val activeName: String? = null, val error: String? = null)
 
-/** Chromecast (media3-cast, Default Media Receiver) + DLNA push; media is always served through [StreamProxy]. */
-@OptIn(UnstableApi::class)
+/** Chromecast (flavor backend, Default Media Receiver) + DLNA push; media is always served through [StreamProxy]. */
 object Casting {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val _state = MutableStateFlow(CastState())
     val state: StateFlow<CastState> = _state.asStateFlow()
-    private var castPlayer: CastPlayer? = null
+    private val chromecast: ChromecastBackend get() = ChromecastImpl
     private var dlna: DlnaRenderer? = null
-    private var pending: MediaItem? = null
-    private var pendingPos = 0L
-    private var routerCb: MediaRouter.Callback? = null
 
-    private fun castContext(ctx: Context): CastContext? = runCatching {
-        @Suppress("DEPRECATION") CastContext.getSharedInstance(ctx.applicationContext)
-    }.getOrNull()
-
-    private fun selector() = MediaRouteSelector.Builder()
-        .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)).build()
-
-    /** Starts discovery of Chromecast routes (Google Play services needed) and DLNA renderers. */
+    /** Starts discovery of Chromecast routes (full flavor with Google Play services) and DLNA renderers. */
     fun startDiscovery(ctx: Context) {
         _state.value = _state.value.copy(searching = true, error = null)
-        val router = runCatching { if (castContext(ctx) != null) MediaRouter.getInstance(ctx) else null }.getOrNull()
         var chromecasts = emptyList<CastTarget>()
         var dlnas = emptyList<CastTarget>()
         fun publish() { _state.value = _state.value.copy(devices = chromecasts + dlnas) }
-        if (router != null) {
-            val sel = selector()
-            fun refresh() { chromecasts = router.routes.filter { !it.isDefault && it.matchesSelector(sel) }.map { CastTarget.Chromecast(it) }; publish() }
-            val cb = object : MediaRouter.Callback() {
-                override fun onRouteAdded(r: MediaRouter, route: MediaRouter.RouteInfo) = refresh()
-                override fun onRouteRemoved(r: MediaRouter, route: MediaRouter.RouteInfo) = refresh()
-                override fun onRouteChanged(r: MediaRouter, route: MediaRouter.RouteInfo) = refresh()
-            }
-            routerCb?.let { router.removeCallback(it) }
-            router.addCallback(sel, cb, MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN); routerCb = cb
-            refresh()
-        }
+        if (chromecast.supported) chromecast.startDiscovery(ctx) { chromecasts = it; publish() }
         scope.launch(Dispatchers.IO) {
             dlnas = runCatching { Dlna.discover() }.getOrDefault(emptyList()).map { CastTarget.Dlna(it) }
             scope.launch { publish(); _state.value = _state.value.copy(searching = false) }
@@ -81,7 +54,7 @@ object Casting {
     }
 
     fun stopDiscovery(ctx: Context) {
-        routerCb?.let { cb -> runCatching { MediaRouter.getInstance(ctx).removeCallback(cb) } }; routerCb = null
+        chromecast.stopDiscovery(ctx)
         _state.value = _state.value.copy(searching = false)
     }
 
@@ -100,37 +73,23 @@ object Casting {
                     .onFailure { e -> _state.value = _state.value.copy(error = e.message ?: e.javaClass.simpleName) }
             }
             is CastTarget.Chromecast -> {
-                val cc = castContext(ctx) ?: run { _state.value = _state.value.copy(error = "Google Play services?"); return }
-                pending = MediaItem.Builder().setUri(url).setMimeType(mime)
-                    .setMediaMetadata(MediaMetadata.Builder().setTitle(title).build()).build()
-                pendingPos = positionMs
-                val cp = castPlayer ?: CastPlayer(cc).also { castPlayer = it }
-                cp.setSessionAvailabilityListener(object : SessionAvailabilityListener {
-                    override fun onCastSessionAvailable() { loadPending() }
-                    override fun onCastSessionUnavailable() { _state.value = _state.value.copy(activeName = null) }
-                })
-                if (cp.isCastSessionAvailable) loadPending() else MediaRouter.getInstance(ctx).selectRoute(target.route)
+                val err = chromecast.cast(ctx, target, url, mime, title, positionMs) { _state.value = _state.value.copy(activeName = null) }
+                if (err != null) { _state.value = _state.value.copy(error = err); return }
                 _state.value = _state.value.copy(activeName = target.name, error = null)
                 onStarted()
             }
         }
     }
 
-    private fun loadPending() {
-        val cp = castPlayer ?: return; val item = pending ?: return
-        cp.setMediaItem(item, pendingPos); cp.prepare(); cp.playWhenReady = true; pending = null
-    }
-
     fun togglePause() {
-        castPlayer?.takeIf { it.isCastSessionAvailable }?.let { it.playWhenReady = !it.playWhenReady; return }
+        if (chromecast.togglePause()) return
         dlna?.let { r -> val resume = dlnaPaused; dlnaPaused = !resume; scope.launch(Dispatchers.IO) { if (resume) Dlna.resume(r) else Dlna.pause(r) } }
     }
     @Volatile private var dlnaPaused = false
 
     fun stop(ctx: Context) {
         dlna?.let { r -> scope.launch(Dispatchers.IO) { Dlna.stop(r) } }; dlna = null
-        castPlayer?.let { cp -> runCatching { cp.stop(); cp.clearMediaItems() } }
-        runCatching { castContext(ctx)?.sessionManager?.endCurrentSession(true) }
+        chromecast.stop(ctx)
         _state.value = _state.value.copy(activeName = null)
     }
 }

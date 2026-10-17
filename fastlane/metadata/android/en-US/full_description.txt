@@ -1,0 +1,29 @@
+Remote Video Player plays videos stored on your computer or NAS over the home network — no transcoding server required.
+
+<b>Sources</b>
+<ul>
+<li>SMB (Windows shares, Samba, Synology/QNAP), including custom ports</li>
+<li>WebDAV and plain HTTP directory listings</li>
+<li>Jellyfin: login, libraries, watched state</li>
+</ul>
+
+<b>Player</b>
+<ul>
+<li>Media3/ExoPlayer with gestures, audio/subtitle track selection, picture-in-picture and background audio</li>
+<li>External subtitles (SRT/VTT/ASS) with per-file delay</li>
+<li>Resume positions, "Continue watching", up-next for series</li>
+</ul>
+
+<b>Library</b>
+<ul>
+<li>Combined library and fast search across all servers</li>
+<li>Series grouping with seasons, episodes and watched marks</li>
+<li>Optional TMDB posters and details (needs your own TMDB API key)</li>
+<li>Offline downloads</li>
+</ul>
+
+<b>Casting</b>: DLNA/UPnP TVs through a local proxy. The F-Droid build does not include Google Cast (Chromecast), which requires proprietary Google Play services.
+
+Android TV is supported (launcher banner, remote control).
+
+Passwords are encrypted with the Android Keystore. No ads, no tracking. Source code: Apache-2.0.

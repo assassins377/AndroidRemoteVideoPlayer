@@ -1,0 +1,1 @@
+Library with search across all servers, series screen, Jellyfin, offline downloads, DLNA/Chromecast casting, Android TV support, movie details, per-file subtitle delay, favourites, widget.

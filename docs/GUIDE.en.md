@@ -413,9 +413,13 @@ The "Cast" button in the player discovers DLNA/UPnP renderers (TVs, set-top boxe
 
 ### Chromecast (desktop)
 The Cast dialog lists Chromecasts discovered via mDNS (`_googlecast._tcp`) next to DLNA devices. Video goes to the Default Media Receiver through the same LAN proxy; pause, seek and stop are available. Limits: Chromecast plays MP4/WebM (H.264/VP8/VP9, AAC/Opus); MKV is announced as video/mp4 and only plays with compatible codecs; external subtitles are not sent. Discovery needs multicast (UDP 5353) on the network and incoming connections to the app allowed.
+
 ## Windows (desktop)
 
 - Installer `RemoteVideoPlayer-<version>-windows-x64.msi` (per-user install, folder choice) or the portable `...-windows-x64-portable.zip` (extract and run `remote-video-player.exe`).
 - Requires **64-bit VLC 3.x** (https://www.videolan.org/vlc/). The app looks it up in the registry (`HKLM\SOFTWARE\VideoLAN\VLC\InstallDir`) and in `C:\Program Files\VideoLAN\VLC`; if VLC is missing the player shows a message with a link.
 - Passwords are stored in **Windows Credential Manager** (`RemoteVideoPlayer/...` entries); if unavailable, in a file encrypted with the current user's DPAPI key.
 - Data: `%APPDATA%\RemoteVideoPlayer` (servers, settings), `%LOCALAPPDATA%\RemoteVideoPlayer` (library, positions, cache), downloads in `%USERPROFILE%\Videos\Remote Video Player`.
+
+## Build without proprietary components (F-Droid)
+Releases contain two APKs: the regular one (`...-release.apk`, Chromecast via Google Play services) and `...-fdroid-release.apk` without any Google components; it casts to DLNA devices only. Both are signed with the same key. F-Droid preparation is described in `docs/fdroid/README.md`.
