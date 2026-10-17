@@ -21,6 +21,8 @@ object Routes {
     const val BROWSER = "browser/{serverId}?path={path}"
     const val FAVORITES = "favorites"
     const val LIBRARY = "library"
+    const val SERIES = "library/series/{key}"
+    fun series(key: String) = "library/series/${Uri.encode(key)}"
     const val PLAYER = "player?uri={uri}"
     fun browser(serverId: String, path: String = "") = "browser/${Uri.encode(serverId)}?path=${Uri.encode(path)}"
     fun player(uri: String) = "player?uri=${Uri.encode(uri)}"
@@ -50,6 +52,14 @@ fun AppNavGraph() {
         }
         composable(Routes.LIBRARY) {
             com.assassins377.remoteplayer.ui.library.LibraryScreen(
+                onPlay = { uri -> nav.navigate(Routes.player(uri)) },
+                onBack = { nav.popBackStack() },
+                onOpenSeries = { nav.navigate(Routes.series(it)) },
+            )
+        }
+        composable(Routes.SERIES, arguments = listOf(navArgument("key") { type = NavType.StringType })) {
+            com.assassins377.remoteplayer.ui.library.SeriesScreen(
+                seriesKey = it.arguments?.getString("key").orEmpty(),
                 onPlay = { uri -> nav.navigate(Routes.player(uri)) },
                 onBack = { nav.popBackStack() },
             )

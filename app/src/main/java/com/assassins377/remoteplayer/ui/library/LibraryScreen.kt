@@ -37,7 +37,7 @@ private const val PAGE = 200
 /** Combined library: FTS search (debounced), SQL sort/filter, LIMIT-based paging, scan progress with cancel. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit) {
+fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (String) -> Unit = {}) {
     val st by LibraryStore.state.collectAsStateWithLifecycle()
     val servers by ServerStore.servers.collectAsStateWithLifecycle()
     val settings by SettingsStore.settings.collectAsStateWithLifecycle()
@@ -46,13 +46,17 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit) {
     LaunchedEffect(input) { if (input.isNotEmpty()) delay(250); query = input }
     var sort by rememberSaveable { mutableStateOf(LibrarySort.TITLE) }
     var serverFilter by rememberSaveable { mutableStateOf<String?>(null) }
-    var limit by remember(query, sort, serverFilter) { mutableIntStateOf(PAGE) }
+    var mode by rememberSaveable { mutableStateOf(LibraryMode.ALL) }
+    var limit by remember(query, sort, serverFilter, mode) { mutableIntStateOf(PAGE) }
     val live = remember(servers) { servers.map { it.id } }
     val filter = serverFilter?.let { listOf(it) }
     val dao = LibraryStore.db.dao()
-    val list by remember(query, sort, filter, live, limit) { dao.observe(LibrarySql.list(query, filter, sort, live, limit)) }
+    val list by remember(query, sort, filter, live, limit, mode) { dao.observe(LibrarySql.list(query, filter, sort, live, limit, mode = mode)) }
         .collectAsStateWithLifecycle(initialValue = null)
-    val total by remember(query, filter, live) { dao.observeCount(LibrarySql.count(query, filter, live)) }.collectAsStateWithLifecycle(initialValue = 0)
+    val seriesList by remember(query, sort, filter, live, limit, mode) {
+        if (mode == LibraryMode.SERIES) dao.observeSeries(LibrarySql.series(query, filter, sort, live, limit)) else kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val total by remember(query, filter, live, mode) { dao.observeCount(LibrarySql.count(query, filter, live, mode)) }.collectAsStateWithLifecycle(initialValue = 0)
     val listState = rememberLazyListState()
     LaunchedEffect(listState, list) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.distinctUntilChanged().collect { last ->
@@ -84,6 +88,12 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit) {
             OutlinedTextField(input, { input = it }, placeholder = { Text(stringResource(R.string.library_search_hint)) },
                 singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(LibraryMode.ALL to R.string.library_mode_all, LibraryMode.MOVIES to R.string.library_mode_movies,
+                    LibraryMode.SERIES to R.string.library_mode_series).forEach { (k, label) ->
+                    FilterChip(selected = mode == k, onClick = { mode = k }, label = { Text(stringResource(label)) })
+                }
+            }
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(LibrarySort.TITLE to R.string.library_sort_title, LibrarySort.YEAR to R.string.library_sort_year,
                     LibrarySort.ADDED to R.string.library_sort_added).forEach { (k, label) ->
                     FilterChip(selected = sort == k, onClick = { sort = k }, label = { Text(stringResource(label)) })
@@ -105,6 +115,10 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit) {
             }
             val rows = list
             when {
+                mode == LibraryMode.SERIES -> if (seriesList.isEmpty() && !st.scanning) Text(stringResource(R.string.library_nothing_found), Modifier.padding(24.dp))
+                    else LazyColumn(Modifier.fillMaxSize(), state = listState) {
+                        items(seriesList, key = { it.seriesKey }) { sr -> SeriesItem(sr, settings) { onOpenSeries(sr.seriesKey) } }
+                    }
                 rows == null -> {}
                 rows.isEmpty() && !st.scanning -> Text(stringResource(if (query.isBlank() && serverFilter == null) R.string.library_empty else R.string.library_nothing_found), Modifier.padding(24.dp))
                 else -> LazyColumn(Modifier.fillMaxSize(), state = listState) {
@@ -129,4 +143,19 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun SeriesItem(sr: SeriesRow, settings: com.assassins377.remoteplayer.settings.AppSettings, onClick: () -> Unit) {
+    val p = remember(sr.seriesTitle) { com.assassins377.remoteplayer.meta.ParsedTitle(sr.seriesTitle, forceTv = true) }
+    val meta by produceState(com.assassins377.remoteplayer.meta.TmdbRepository.cached(p), p.key, settings.tmdbEnabled) {
+        if (value == null && settings.tmdbEnabled) { delay(300); value = com.assassins377.remoteplayer.meta.TmdbRepository.lookup(p) }
+    }
+    val f = com.assassins377.remoteplayer.data.RemoteFile(sr.seriesTitle, sr.samplePath, true)
+    ListItem(
+        leadingContent = { Poster(f, meta, Modifier.size(48.dp, 72.dp)) },
+        headlineContent = { Text(meta?.title?.ifBlank { null } ?: sr.seriesTitle, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        supportingContent = { Text(stringResource(R.string.series_counts_fmt, sr.seasons, sr.episodes)) },
+        modifier = Modifier.clickable(onClick = onClick),
+    )
 }

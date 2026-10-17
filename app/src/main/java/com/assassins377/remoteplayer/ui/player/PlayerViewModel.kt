@@ -46,6 +46,7 @@ import kotlinx.coroutines.launch
 /** Owns the ExoPlayer so playback survives configuration changes. Configured from [SettingsStore]. */
 @OptIn(UnstableApi::class)
 class PlayerViewModel(app: Application) : AndroidViewModel(app) {
+    companion object { const val COUNTDOWN_SEC = 10 }
     val settings: AppSettings = SettingsStore.current
 
     private val loadControl = DefaultLoadControl.Builder()
@@ -108,7 +109,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             }
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_ENDED) {
-                    currentUri?.let { ResumeStore.save(it, 0, 0) }
+                    currentUri?.let { ResumeStore.save(it, 0, 0); markWatched(it) }
                     if (settings.autoplayNext) playNext()
                 }
             }
@@ -181,20 +182,52 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         return runCatching { ServerStore.repositoryFor(server.type).list(server, ref.path.substringBeforeLast('/', "")) }.getOrNull()
     }
 
+    /** "Up next" countdown: title + seconds left; null = hidden. */
+    data class UpNext(val title: String, val uri: String, val secondsLeft: Int)
+    private val _upNext = MutableStateFlow<UpNext?>(null)
+    val upNext: StateFlow<UpNext?> = _upNext.asStateFlow()
+    private var upNextJob: kotlinx.coroutines.Job? = null
+
+    private fun markWatched(uri: String) {
+        val ref = PlaybackRef.parse(uri) ?: return
+        com.assassins377.remoteplayer.settings.WatchedStore.set(com.assassins377.remoteplayer.settings.WatchedStore.key(ref.serverId, ref.path), true)
+    }
+
+    /** Next episode from the library (series order), else next video in the folder; shown with a countdown. */
     private fun playNext() {
         val uri = currentUri ?: return
         val ref = PlaybackRef.parse(uri) ?: return
-        viewModelScope.launch {
-            val folder = folderListing(uri) ?: return@launch
-            val next = FileSorter.nextVideo(folder, ref.path.substringAfterLast('/')) ?: return@launch
-            play(ref.withPath(next.path))
+        upNextJob?.cancel()
+        upNextJob = viewModelScope.launch {
+            val server = ServerStore.get(ref.serverId) ?: return@launch
+            val (title, nextUri) = nextEpisode(ref, server) ?: run {
+                val folder = folderListing(uri) ?: return@launch
+                val next = FileSorter.nextVideo(folder, ref.path.substringAfterLast('/')) ?: return@launch
+                com.assassins377.remoteplayer.meta.TitleParser.parse(next.name).display to ref.withPath(next.path)
+            }
+            for (s in COUNTDOWN_SEC downTo 1) { _upNext.value = UpNext(title, nextUri, s); delay(1000) }
+            _upNext.value = null
+            play(nextUri)
         }
     }
 
+    private suspend fun nextEpisode(ref: PlaybackRef, server: com.assassins377.remoteplayer.data.ServerConfig): Pair<String, String>? = runCatching {
+        val dao = com.assassins377.remoteplayer.library.LibraryStore.db.dao()
+        val cur = dao.find(ref.serverId, ref.path.trim('/')) ?: return null
+        val key = cur.seriesKey ?: return null
+        val next = com.assassins377.remoteplayer.library.Episodes.next(dao.episodes(key, listOf(ref.serverId)), cur) ?: return null
+        next.title to ServerStore.repositoryFor(server.type).playbackUri(server, RemoteFile(next.name, next.path, false))
+    }.getOrNull()
+
+    fun playUpNextNow() { val u = _upNext.value ?: return; upNextJob?.cancel(); _upNext.value = null; play(u.uri) }
+    fun cancelUpNext() { upNextJob?.cancel(); _upNext.value = null }
+
     fun savePosition() {
         val uri = currentUri ?: return
-        if (!settings.resume || player.playbackState == Player.STATE_IDLE) return
-        ResumeStore.save(uri, player.currentPosition, player.duration.takeIf { it != C.TIME_UNSET } ?: 0)
+        if (player.playbackState == Player.STATE_IDLE) return
+        val dur = player.duration.takeIf { it != C.TIME_UNSET } ?: 0
+        if (settings.resume) ResumeStore.save(uri, player.currentPosition, dur)
+        if (com.assassins377.remoteplayer.settings.WatchedStore.shouldMark(player.currentPosition, dur)) markWatched(uri)
     }
 
     fun setSpeed(value: Float) {

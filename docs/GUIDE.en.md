@@ -307,6 +307,12 @@ You can add several servers of different types (SMB, WebDAV, HTTP) at once — e
 - If a server can't be reached, an error with its name appears below the search field and its old entries stay in the library.
 - New files appear only after a refresh (button, or automatically on start — see Settings).
 
+### Series
+In **Library**, choose **Series**: episodes of one show are grouped into one card (seasons/episodes). Names like `Show.S01E02`, `Show.1x02`, Russian «1 сезон 2 серия», and folders like `Show/Season 2/E05.mkv` are recognised. Inside are season tabs and the episode list with progress bars.
+- The circle on the left (or a long press) marks an episode watched/unwatched. Videos played to 90 % are marked automatically.
+- When an episode ends (with "Autoplay next" on), a card "Next episode in N s" appears with **Play now** and **Cancel**. The next episode comes from the library in season/episode order, otherwise the next file in the folder.
+- After updating the app, tap **Refresh library** once: the database format changed.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

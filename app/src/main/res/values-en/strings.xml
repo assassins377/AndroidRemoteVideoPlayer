@@ -187,4 +187,14 @@
     <string name="library_server_progress_fmt">%1$s: folders %2$d, videos %3$d</string>
     <string name="library_total_fmt">Found: %1$d</string>
     <string name="library_updated_fmt">Updated %1$s</string>
+    <string name="library_mode_all">All</string>
+    <string name="library_mode_movies">Movies</string>
+    <string name="library_mode_series">Series</string>
+    <string name="series_counts_fmt">Seasons: %1$d · episodes: %2$d</string>
+    <string name="season_fmt">Season %1$d</string>
+    <string name="episode_fmt">Episode %1$d</string>
+    <string name="mark_watched">Mark as watched</string>
+    <string name="mark_unwatched">Mark as unwatched</string>
+    <string name="up_next_fmt">Next episode in %1$d s</string>
+    <string name="up_next_play">Play now</string>
 </resources>
