@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleWidgetIntent(intent)
         enableEdgeToEdge()
         val tv = com.assassins377.remoteplayer.ui.theme.Tv.isTv(this)
         setContent {
@@ -36,6 +37,12 @@ class MainActivity : ComponentActivity() {
                 androidx.compose.foundation.layout.Box(if (tv && !full) androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 27.dp) else androidx.compose.ui.Modifier) { AppNavGraph() }
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) { super.onNewIntent(intent); handleWidgetIntent(intent) }
+
+    private fun handleWidgetIntent(i: android.content.Intent?) {
+        i?.getStringExtra(ContinueWidget.EXTRA_PLAY_URI)?.let { ContinueWidget.pendingPlay.value = it; i.removeExtra(ContinueWidget.EXTRA_PLAY_URI) }
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {

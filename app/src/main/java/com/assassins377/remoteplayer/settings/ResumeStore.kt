@@ -96,6 +96,7 @@ object ResumeStore {
     private fun persist() {
         _version.value++
         val c = context ?: return
+        runCatching { com.assassins377.remoteplayer.ContinueWidget.update(c) }
         val json = Json.encodeToString(positions.snapshot())
         scope.launch { c.historyStore.edit { it[KEY] = json } }
     }

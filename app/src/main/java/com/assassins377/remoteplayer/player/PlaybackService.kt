@@ -11,11 +11,39 @@ import com.assassins377.remoteplayer.MainActivity
 
 /** Process-wide handle to the player owned by PlayerViewModel, so the service can expose it via MediaSession. */
 object PlayerHolder {
+    /** Keep playing after Back if the user intends playback (also while buffering). */
+    fun shouldContinue(playWhenReady: Boolean, state: Int) =
+        playWhenReady && state != androidx.media3.common.Player.STATE_ENDED && state != androidx.media3.common.Player.STATE_IDLE
+
     @Volatile var player: Player? = null
     internal var onRelease: (() -> Unit)? = null
 
     /** Called by the ViewModel before releasing the player. */
-    fun detach() { onRelease?.invoke(); onRelease = null; player = null }
+    fun detach() { val r = onRelease; onRelease = null; player = null; r?.invoke() }
+
+    private var orphanRelease: (() -> Unit)? = null
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /**
+     * Back pressed with "background audio" on: the player screen is gone but playback continues, owned by the
+     * MediaSession service. Position is saved every 10 s; the player is released when playback ends/stops, the
+     * service is destroyed, or a new player screen opens.
+     */
+    fun keepInBackground(p: Player, savePosition: () -> Unit, release: () -> Unit) {
+        releaseOrphan()
+        orphanRelease = { main.removeCallbacksAndMessages(null); savePosition(); release() }
+        val tick = object : Runnable { override fun run() { savePosition(); main.postDelayed(this, 10_000) } }
+        main.postDelayed(tick, 10_000)
+        p.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_ENDED || state == Player.STATE_IDLE) main.post { releaseOrphan() }
+            }
+        })
+    }
+
+    val hasOrphan: Boolean get() = orphanRelease != null
+
+    fun releaseOrphan() { val r = orphanRelease ?: return; orphanRelease = null; r() }
 }
 
 /**
@@ -47,5 +75,5 @@ class PlaybackService : MediaSessionService() {
 
     private fun releaseSession() { session?.release(); session = null }
 
-    override fun onDestroy() { releaseSession(); super.onDestroy() }
+    override fun onDestroy() { releaseSession(); PlayerHolder.releaseOrphan(); super.onDestroy() }
 }

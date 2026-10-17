@@ -220,4 +220,6 @@
     <string name="download">Скачать на устройство</string>
     <string name="download_added">Добавлено в загрузки</string>
     <string name="clear">Очистить</string>
+    <string name="host_smb_port_hint">Другой порт: через двоеточие, например 192.168.1.10:4455</string>
+    <string name="widget_empty">Нет недосмотренных видео</string>
 </resources>

@@ -6,6 +6,7 @@
 
 ## ✨ Новое / What's new
 
+- Порт SMB, звук после «Назад», виджет / SMB port, background audio after Back, widget
 - Избранное и «Не тот фильм?» в библиотеке / Favourites & match fix in Library
 - Подсказки и фразовый поиск / Search suggestions & phrases
 - Jellyfin: вход, библиотеки, просмотрено (Plex — нет) / Jellyfin direct support

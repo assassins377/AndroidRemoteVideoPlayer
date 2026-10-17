@@ -1,5 +1,6 @@
 package com.assassins377.remoteplayer
 
+import kotlinx.coroutines.flow.drop
 import android.app.Application
 import kotlinx.coroutines.launch
 import com.assassins377.remoteplayer.data.KeystoreSecretStore
@@ -20,6 +21,10 @@ class RemotePlayerApp : Application() {
         com.assassins377.remoteplayer.settings.WatchedStore.init(this)
         com.assassins377.remoteplayer.meta.TmdbRepository.init(this)
         ServerStore.init(this, KeystoreSecretStore())
+        // Widget hides videos of removed servers / shows renamed ones.
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+            ServerStore.servers.drop(1).collect { runCatching { ContinueWidget.update(this@RemotePlayerApp) } }
+        }
         // Jellyfin played-state sync for watched marks set in the app.
         com.assassins377.remoteplayer.settings.WatchedStore.onUserChange = { key, watched ->
             val id = key.substringBefore('/'); val path = key.substringAfter('/')
