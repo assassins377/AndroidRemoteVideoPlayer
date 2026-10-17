@@ -47,6 +47,8 @@ data class AppSettings(
     val tmdbEnabled: Boolean = false,
     /** Keystore-encrypted API key/token (see TmdbRepository). */
     val tmdbKeyEnc: String = "",
+    /** Frame from the video itself when TMDB has no poster. */
+    val videoThumbnails: Boolean = true,
     // Library
     val libraryRefreshOnStart: Boolean = false,
     val libraryMaxDepth: Int = 5,
@@ -105,6 +107,7 @@ data class AppSettings(
                 horizontalSeek = b("horizontalSeek", d.horizontalSeek),
                 tmdbEnabled = b("tmdbEnabled", d.tmdbEnabled),
                 tmdbKeyEnc = s("tmdbKeyEnc", d.tmdbKeyEnc),
+                videoThumbnails = b("videoThumbnails", d.videoThumbnails),
                 libraryRefreshOnStart = b("libraryRefreshOnStart", d.libraryRefreshOnStart),
                 libraryMaxDepth = i("libraryMaxDepth", d.libraryMaxDepth) { it in 0..30 },
                 libraryRoots = s("libraryRoots", d.libraryRoots),

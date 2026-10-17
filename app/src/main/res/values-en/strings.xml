@@ -200,4 +200,5 @@
     <string name="sub_delay_fmt">External subtitle delay: %1$s</string>
     <string name="sub_delay_reset">Reset delay</string>
     <string name="sec_unit">s</string>
+    <string name="video_thumbnails">Frame from video when there is no poster</string>
 </resources>

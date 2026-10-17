@@ -200,4 +200,5 @@
     <string name="sub_delay_fmt">Задержка внешних субтитров: %1$s</string>
     <string name="sub_delay_reset">Сбросить задержку</string>
     <string name="sec_unit">с</string>
+    <string name="video_thumbnails">Кадр из видео, если нет постера</string>
 </resources>

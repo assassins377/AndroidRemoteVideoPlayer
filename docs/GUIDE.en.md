@@ -317,6 +317,9 @@ In **Library**, choose **Series**: episodes of one show are grouped into one car
 In the player tap **Tracks**. If the video has external subtitles (.srt/.vtt/.ass next to it), there is "External subtitle delay" with −0.5 / −0.1 / +0.1 / +0.5 s buttons. "+" shows subtitles later. The value is remembered per file; **Reset delay** sets it back to 0. Changing it reloads the video at the same position for a moment.
 Limitations: embedded (MKV) subtitles and audio cannot be shifted (not supported by the Media3 player).
 
+### Video thumbnails
+If TMDB is off or didn't find the film, a frame from the video itself (about 10 % in) is shown instead of the film icon. The app reads only the needed parts of the file over the network, one video at a time, and caches the image. Turn off in **Settings → Posters & titles → Frame from video when there is no poster**. "Clear cache" removes thumbnails too.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

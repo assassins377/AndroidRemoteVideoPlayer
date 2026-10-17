@@ -127,7 +127,7 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
                         val f = remember(e) { e.toRemoteFile() }
                         val (p, m) = rememberMeta(f, settings, e.serverId)
                         ListItem(
-                            leadingContent = { Poster(f, m, Modifier.size(48.dp, 72.dp)) },
+                            leadingContent = { Poster(f, m, Modifier.size(48.dp, 72.dp), e.serverId) },
                             headlineContent = { Text(headline(f, p, m), maxLines = 2, overflow = TextOverflow.Ellipsis) },
                             supportingContent = {
                                 Column {
