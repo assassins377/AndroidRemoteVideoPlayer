@@ -393,3 +393,6 @@ Film.eng.forced.ass
 - Данные: `$XDG_CONFIG_HOME/remoteplayer` (серверы, настройки), `$XDG_DATA_HOME/remoteplayer` (библиотека, позиции), `$XDG_CACHE_HOME/remoteplayer` (постеры).
 - Доп. аргументы libvlc: `REMOTEPLAYER_VLC_ARGS`.
 - Запуск из исходников: `./gradlew :desktop:run`.
+
+### Установка
+`sudo apt install vlc ./remote-video-player_<версия>-1_amd64.deb` или распакуйте `remote-video-player-<версия>-linux-x64.tar.gz` и запустите `remote-video-player/bin/remote-video-player`.
