@@ -1,6 +1,5 @@
 # DRAFT metadata for https://gitlab.com/fdroid/fdroiddata (metadata/com.assassins377.remoteplayer.yml).
-# Not submitted. The `fdroid` product flavor first exists after the F-Droid readiness PR, so the first
-# buildable tag is the next release after v1.2.0 — update versionName/versionCode/commit when it is tagged.
+# Not submitted. v1.3.0 is the first tag that contains the `fdroid` product flavor.
 Categories:
   - Multimedia
 License: Apache-2.0

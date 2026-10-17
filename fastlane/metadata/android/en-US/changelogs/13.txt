@@ -1,0 +1,1 @@
+Windows desktop app (MSI, portable zip) and Chromecast on desktop. Android: new F-Droid build without Google components (DLNA casting only); the regular build keeps Chromecast.

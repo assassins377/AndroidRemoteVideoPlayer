@@ -1,0 +1,1 @@
+Версия для Windows (MSI, переносимый zip) и Chromecast на десктопе. Android: новая сборка для F-Droid без компонентов Google (трансляция только DLNA); обычная сборка сохраняет Chromecast.
