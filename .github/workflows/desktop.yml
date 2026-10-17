@@ -14,19 +14,26 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v4
-      - run: sudo apt-get update && sudo apt-get install -y fakeroot
+      - run: sudo apt-get update && sudo apt-get install -y fakeroot file
       - run: ./gradlew --no-daemon :desktop:test :desktop:packageDeb :desktop:packageAppImage
-      - name: tar.gz with launcher
+      - name: Package (.deb deps, tar.gz, AppImage)
         run: |
-          V=$(ls desktop/build/compose/binaries/main/deb/*.deb | sed -E 's/.*_([0-9.]+)-.*/\1/')
-          tar -C desktop/build/compose/binaries/main/app -czf remote-video-player-$V-linux-x64.tar.gz remote-video-player
+          DEB=$(ls desktop/build/compose/binaries/main/deb/*.deb)
+          V=$(dpkg-deb -f "$DEB" Version | cut -d- -f1)
+          bash desktop/packaging/patch-deb.sh "$DEB"
+          mkdir -p dist && cp "$DEB" dist/
+          tar -C desktop/build/compose/binaries/main/app -czf dist/remote-video-player-$V-linux-x64.tar.gz remote-video-player
+          curl -sSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          bash desktop/packaging/build-appimage.sh "$PWD/appimagetool" "$V" dist
+          ls -l dist
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: |
-            desktop/build/compose/binaries/main/deb/*.deb
-            remote-video-player-*-linux-x64.tar.gz
-      - name: Attach to release draft
+          path: dist/*
+      - name: Attach to release draft (created if missing)
         if: startsWith(github.ref, 'refs/tags/')
         env: { GH_TOKEN: '${{ github.token }}' }
-        run: gh release upload "$GITHUB_REF_NAME" desktop/build/compose/binaries/main/deb/*.deb remote-video-player-*-linux-x64.tar.gz --clobber
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes "Linux desktop build"
+          gh release upload "$GITHUB_REF_NAME" dist/* --clobber

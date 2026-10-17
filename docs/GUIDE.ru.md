@@ -396,3 +396,5 @@ Film.eng.forced.ass
 
 ### Установка
 `sudo apt install vlc ./remote-video-player_<версия>-1_amd64.deb` или распакуйте `remote-video-player-<версия>-linux-x64.tar.gz` и запустите `remote-video-player/bin/remote-video-player`.
+
+Также доступен `RemoteVideoPlayer-<версия>-x86_64.AppImage`: `chmod +x` и запуск (нужен установленный VLC). Пакет .deb зависит от `libvlc5 | vlc`.
