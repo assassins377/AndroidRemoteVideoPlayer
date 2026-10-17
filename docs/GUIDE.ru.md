@@ -383,3 +383,13 @@ Film.eng.forced.ass
 - Пароли серверов и ключ TMDB хранятся на устройстве в зашифрованном виде (ключ шифрования находится в Android Keystore).
 - Приложение не собирает статистику и не имеет аналитики или рекламы. Оно подключается только к вашим серверам и, если включено «Загружать постеры и названия», к TMDB (api.themoviedb.org, image.tmdb.org). В TMDB отправляются только названия и годы, распознанные из имён файлов.
 - Экспорт серверов не содержит паролей.
+
+## Linux (десктоп)
+
+Модуль `desktop` (Compose for Desktop) использует общий модуль `shared` с Android-приложением.
+
+- Зависимость плеера: системный VLC (`sudo apt install vlc`, libvlc 3.x, используется через vlcj). Без него экран плеера покажет ошибку.
+- Пароли хранятся в Secret Service через `secret-tool` (пакет `libsecret-tools`). Если он недоступен, используется зашифрованный файл (AES-256-GCM) `~/.config/remoteplayer/secrets.properties` с ключом `secret.key` (права 600). Принудительно: `REMOTEPLAYER_SECRETS=file`.
+- Данные: `$XDG_CONFIG_HOME/remoteplayer` (серверы, настройки), `$XDG_DATA_HOME/remoteplayer` (библиотека, позиции), `$XDG_CACHE_HOME/remoteplayer` (постеры).
+- Доп. аргументы libvlc: `REMOTEPLAYER_VLC_ARGS`.
+- Запуск из исходников: `./gradlew :desktop:run`.

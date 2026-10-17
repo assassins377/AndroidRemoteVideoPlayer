@@ -3,6 +3,9 @@
 Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии — [SemVer](https://semver.org/lang/ru/).
 
 ## [Unreleased]
+
+### Добавлено
+- Десктопная версия для Linux (модуль `desktop`, Compose for Desktop): серверы, обзор папок, библиотека и поиск, постеры, плеер на VLC (дорожки, задержка аудио/субтитров, скорость), позиции просмотра, настройки, RU/EN.
 ### Изменено
 - Код сетевых клиентов (SMB/WebDAV/HTTP/Jellyfin), TMDB, разбора названий/сериалов и индекса библиотеки вынесен в модуль Kotlin Multiplatform `shared` (Android + JVM) — основа для версии для Linux. Индекс библиотеки переведён на Room KMP с той же схемой: база на Android открывается без миграции и переиндексации.
 

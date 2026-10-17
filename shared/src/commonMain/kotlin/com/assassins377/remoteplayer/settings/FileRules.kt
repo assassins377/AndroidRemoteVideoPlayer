@@ -1,6 +1,5 @@
 package com.assassins377.remoteplayer.settings
 
-import androidx.media3.common.MimeTypes
 import com.assassins377.remoteplayer.data.RemoteFile
 
 object FileSorter {
@@ -43,9 +42,9 @@ object SubtitleMatcher {
     }
 
     fun mimeFor(name: String): String = when (name.substringAfterLast('.').lowercase()) {
-        "srt" -> MimeTypes.APPLICATION_SUBRIP
-        "ass", "ssa" -> MimeTypes.TEXT_SSA
-        "vtt" -> MimeTypes.TEXT_VTT
-        else -> MimeTypes.TEXT_UNKNOWN
+        "srt" -> "application/x-subrip"
+        "ass", "ssa" -> "text/x-ssa"
+        "vtt" -> "text/vtt"
+        else -> "text/x-unknown"
     }
 }
