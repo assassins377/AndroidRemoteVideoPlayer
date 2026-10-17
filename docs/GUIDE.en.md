@@ -326,6 +326,11 @@ A long press on a video opens its card: poster, rating, tagline, genres and runt
 ### Android TV
 Install the APK on the TV/box (e.g. via "Send files to TV" or adb). The app appears in the TV launcher. Navigate with the remote's arrows and OK; on TV the file list is always a grid and the focused card has a border. In the player: ←/→ seek by the configured step, OK pause/resume, ↑/↓ show the controls (then use the arrows on the buttons); remote ⏪/⏩/⏯ keys work too.
 
+### Casting to a TV (Chromecast / DLNA)
+In the player tap **Cast**. The app looks for Chromecast devices (Google Play services required) and DLNA TVs (Samsung, LG, Sony…) on the same Wi-Fi. Pick one — the video starts on the TV from the current position and pauses on the phone. "Playing on: …" appears at the top with ⏯ and **Stop**.
+How it works: the phone serves the video over the local network itself (built-in mini server), so any source works, including password-protected SMB and WebDAV. Keep the phone on and on the same network.
+Limitations: Chromecast plays only formats it supports (usually MP4/H.264, WebM; MKV not always, AC3/DTS audio often not). Seek from the TV remote/Google Home; external subtitles are not sent.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

@@ -270,6 +270,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         play(uri, startMs = pos, autoPlay = wasPlaying)
     }
 
+    val currentPlaybackUri: String? get() = currentUri
+
     fun setSpeed(value: Float) {
         _speed.value = value
         player.setPlaybackSpeed(value)

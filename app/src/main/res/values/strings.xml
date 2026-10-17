@@ -205,4 +205,9 @@
     <string name="seasons_fmt">сезонов: %1$d</string>
     <string name="cast">В ролях</string>
     <string name="trailer">▶ Трейлер (YouTube)</string>
+    <string name="cast_button">На ТВ</string>
+    <string name="cast_title">Показать на устройстве</string>
+    <string name="cast_none">Устройства не найдены. Телевизор/Chromecast должен быть в той же Wi-Fi сети.</string>
+    <string name="casting_to_fmt">Воспроизводится на: %1$s</string>
+    <string name="cast_stop">Остановить</string>
 </resources>
