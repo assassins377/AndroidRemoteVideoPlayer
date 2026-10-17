@@ -393,3 +393,6 @@ The `desktop` module (Compose for Desktop) shares the `shared` module with the A
 - Data: `$XDG_CONFIG_HOME/remoteplayer` (servers, settings), `$XDG_DATA_HOME/remoteplayer` (library, positions), `$XDG_CACHE_HOME/remoteplayer` (posters).
 - Extra libvlc args: `REMOTEPLAYER_VLC_ARGS`.
 - Run from source: `./gradlew :desktop:run`.
+
+### Install
+`sudo apt install vlc ./remote-video-player_<version>-1_amd64.deb`, or extract `remote-video-player-<version>-linux-x64.tar.gz` and run `remote-video-player/bin/remote-video-player`.
