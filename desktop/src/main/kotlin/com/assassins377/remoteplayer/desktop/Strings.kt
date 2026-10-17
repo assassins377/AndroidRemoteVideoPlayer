@@ -50,7 +50,7 @@ object Strings {
         "timeout" to "Таймаут сети, с", "retries" to "Повторы", "secrets_backend" to "Пароли хранятся: %s",
         "secret-service" to "в системном хранилище (Secret Service)", "encrypted-file" to "в зашифрованном файле (%s)",
         "audio" to "Звук", "subtitles" to "Субтитры", "off" to "Выкл.", "audio_delay" to "Задержка звука", "sub_delay" to "Задержка субтитров",
-        "speed" to "Скорость", "vlc_missing" to "Не найден VLC (libvlc). Установите: sudo apt install vlc", "player_error" to "Ошибка воспроизведения",
+        "speed" to "Скорость", "vlc_missing" to "Не найден VLC (libvlc). Установите: sudo apt install vlc", "vlc_missing_win" to "Не найден VLC. Установите 64-битный VLC 3.x с videolan.org и перезапустите приложение.", "player_error" to "Ошибка воспроизведения",
         "clear_library" to "Очистить библиотеку", "refresh_on_start" to "Обновлять библиотеку при запуске", "continue" to "Продолжить просмотр",
         "error" to "Ошибка", "about" to "Remote Video Player для Linux", "fullscreen" to "Во весь экран",
     )
@@ -73,7 +73,7 @@ object Strings {
         "timeout" to "Network timeout, s", "retries" to "Retries", "secrets_backend" to "Passwords are stored %s",
         "secret-service" to "in the system keyring (Secret Service)", "encrypted-file" to "in an encrypted file (%s)",
         "audio" to "Audio", "subtitles" to "Subtitles", "off" to "Off", "audio_delay" to "Audio delay", "sub_delay" to "Subtitle delay",
-        "speed" to "Speed", "vlc_missing" to "VLC (libvlc) not found. Install it: sudo apt install vlc", "player_error" to "Playback error",
+        "speed" to "Speed", "vlc_missing" to "VLC (libvlc) not found. Install it: sudo apt install vlc", "vlc_missing_win" to "VLC not found. Install 64-bit VLC 3.x from videolan.org and restart the app.", "player_error" to "Playback error",
         "clear_library" to "Clear library", "refresh_on_start" to "Refresh library on start", "continue" to "Continue watching",
         "error" to "Error", "about" to "Remote Video Player for Linux", "fullscreen" to "Full screen",
     )

@@ -41,3 +41,37 @@ jobs:
             gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes "Linux desktop build"
           fi
           gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test and package (MSI + portable app)
+        shell: bash
+        run: ./gradlew --no-daemon :desktop:test :desktop:packageMsi :desktop:createDistributable
+      - name: Collect MSI and portable zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $msi = Get-ChildItem desktop/build/compose/binaries/main/msi/*.msi | Select-Object -First 1
+          $ver = ($msi.BaseName -split '-')[-1]
+          Copy-Item $msi.FullName "dist/RemoteVideoPlayer-$ver-windows-x64.msi"
+          Compress-Archive -Path desktop/build/compose/binaries/main/app/remote-video-player -DestinationPath "dist/RemoteVideoPlayer-$ver-windows-x64-portable.zip"
+          Get-ChildItem dist | Format-Table Name, Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+      - name: Attach to release draft
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          # Runs after release.yml created the draft (workflow_call, needs: release); create only if missing.
+          if ! gh release list --limit 50 --json tagName -q '.[].tagName' | grep -qx "$GITHUB_REF_NAME"; then
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes "Desktop builds"
+          fi
+          gh release upload "$GITHUB_REF_NAME" dist/* --clobber

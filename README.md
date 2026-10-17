@@ -64,3 +64,7 @@ The `desktop` module (Compose for Desktop) shares the `shared` module with the A
 - Data: `$XDG_CONFIG_HOME/remoteplayer` (servers, settings), `$XDG_DATA_HOME/remoteplayer` (library, positions), `$XDG_CACHE_HOME/remoteplayer` (posters).
 - Extra libvlc args: `REMOTEPLAYER_VLC_ARGS`.
 - Run from source: `./gradlew :desktop:run`.
+
+## Windows
+
+MSI installer and portable zip are built on `windows-latest` (see `.github/workflows/desktop.yml`) and attached to release drafts. Requires 64-bit VLC 3.x. Details: docs/GUIDE.en.md.
