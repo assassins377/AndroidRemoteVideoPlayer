@@ -141,6 +141,21 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Text(stringResource(R.string.tmdb_help), style = MaterialTheme.typography.bodySmall)
             }
 
+            Section(R.string.sec_library)
+            Toggle(R.string.library_refresh_on_start, s.libraryRefreshOnStart) { set("libraryRefreshOnStart", it) }
+            Choice(R.string.library_depth, AppSettings.LIBRARY_DEPTHS, s.libraryMaxDepth, { it.toString() }) { set("libraryMaxDepth", it) }
+            var rootsInput by remember(s.libraryRoots) { mutableStateOf(s.libraryRoots) }
+            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(rootsInput, { rootsInput = it }, label = { Text(stringResource(R.string.library_roots)) },
+                    minLines = 2, modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.library_roots_help), style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(enabled = rootsInput != s.libraryRoots, onClick = { set("libraryRoots", rootsInput); toast(done) }) { Text(stringResource(R.string.save)) }
+                    OutlinedButton(onClick = { com.assassins377.remoteplayer.library.LibraryStore.refresh(); toast(done) }) { Text(stringResource(R.string.library_refresh)) }
+                }
+            }
+            Action(R.string.library_clear) { scope.launch { com.assassins377.remoteplayer.library.LibraryStore.clear() }; toast(done) }
+
             Section(R.string.sec_data)
             Action(R.string.clear_cache) {
                 scope.launch(Dispatchers.IO) { ctx.cacheDir.listFiles()?.forEach { it.deleteRecursively() }; SmbPool.invalidateAll(); TmdbRepository.clearCache() }

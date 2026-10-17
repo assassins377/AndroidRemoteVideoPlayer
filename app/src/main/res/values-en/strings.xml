@@ -164,4 +164,27 @@
     <string name="continue_watching">Continue watching</string>
     <string name="remove_from_history">Remove from history</string>
     <string name="lang_russian">Russian</string>
+    <string name="library">Library</string>
+    <string name="library_search_hint">Search all servers</string>
+    <string name="library_empty">Library is empty. Tap “Refresh” to index videos from all servers.</string>
+    <string name="library_nothing_found">Nothing found</string>
+    <string name="library_refresh">Refresh library</string>
+    <string name="library_scanning">Indexing…</string>
+    <string name="library_count_fmt">Files: %1$d · updated %2$s</string>
+    <string name="library_sort_title">Title</string>
+    <string name="library_sort_year">Year</string>
+    <string name="library_sort_added">Date added</string>
+    <string name="library_all_servers">All servers</string>
+    <string name="library_error_fmt">%1$s: error — %2$s</string>
+    <string name="sec_library">Library</string>
+    <string name="library_refresh_on_start">Refresh library on app start</string>
+    <string name="library_depth">Folder search depth</string>
+    <string name="library_roots">Root folders</string>
+    <string name="library_roots_help">One folder per line (e.g. Movies or Films/New). Empty = whole server. Applies to all servers; missing folders are skipped.</string>
+    <string name="library_clear">Clear library</string>
+    <string name="library_cancel">Stop</string>
+    <string name="library_progress_fmt">Servers: %1$d of %2$d · videos found: %3$d</string>
+    <string name="library_server_progress_fmt">%1$s: folders %2$d, videos %3$d</string>
+    <string name="library_total_fmt">Found: %1$d</string>
+    <string name="library_updated_fmt">Updated %1$s</string>
 </resources>

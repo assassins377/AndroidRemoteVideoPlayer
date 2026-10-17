@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -54,7 +55,9 @@ android {
         checkReleaseBuilds = false
     }
     packaging {
-        resources.excludes += setOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/*.kotlin_module", "META-INF/versions/9/OSGI-INF/MANIFEST.MF")
+        resources.excludes += setOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/*.kotlin_module", "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
+            // Unused by smbj: post-quantum Picnic tables (~1.2 MB) and X.509 reviewer messages; AndroidX license copies.
+            "org/bouncycastle/pqc/crypto/picnic/*.properties", "org/bouncycastle/x509/CertPathReviewerMessages*.properties", "META-INF/androidx/**/LICENSE.txt")
     }
 }
 
@@ -86,8 +89,17 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(platform(libs.compose.bom))
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
     testImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+}
+
+// JVM unit/Robolectric tests run on the debug variant only (Compose UI tests need the debug-only
+// ui-test-manifest); debugMin/release unit-test tasks would just duplicate them, so `./gradlew test` stays green.
+androidComponents {
+    beforeVariants { v -> if (v.buildType != "debug") v.enableUnitTest = false }
 }

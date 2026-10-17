@@ -137,3 +137,35 @@ class ScreensRobolectricTest {
         compose.waitUntil(5_000) { SettingsStore.current.resume == before }
     }
 }
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = TestApp::class, qualifiers = "ru")
+class LibraryScreenRobolectricTest {
+    @get:Rule val compose = createComposeRule()
+
+    @Test fun libraryIndexesSearchesAndPlays() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        com.assassins377.remoteplayer.AppStrings.context = app
+        SettingsStore.init(app); runCatching { ServerStore.init(app, PlainSecrets) }
+        com.assassins377.remoteplayer.library.LibraryStore.init(app, com.assassins377.remoteplayer.library.LibraryDatabase.inMemory(app))
+        val fake = FakeRepo()
+        ServerStore.repositoryOverride = { fake }
+        runBlocking {
+            ServerStore.servers.value.forEach { ServerStore.remove(it.id) }
+            ServerStore.upsert(ServerConfig("s1", "Мой NAS", ServerType.SMB, "h", "media"))
+            ServerStore.upsert(ServerConfig("s2", "Сервер 2", ServerType.HTTP, "http://h/"))
+            com.assassins377.remoteplayer.library.LibraryStore.refreshNow()
+        }
+        var played: String? = null
+        compose.setContent { com.assassins377.remoteplayer.ui.library.LibraryScreen(onPlay = { played = it }, onBack = {}) }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Inception (2010)").fetchSemanticsNodes().size == 2 } // both servers
+        compose.onNodeWithText("Поиск по всем серверам").performTextInput("брат")
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("The Matrix (1999)").fetchSemanticsNodes().isEmpty() }
+        compose.onAllNodesWithText("The Matrix (1999)").assertCountEquals(0)
+        compose.onNodeWithText("Все серверы").assertExists()
+        compose.onAllNodesWithText("Сервер 2")[0].performClick() // filter chip
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Брат (1997)").fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithText("Брат (1997)").performClick()
+        assertEquals("fake://Брат.1997.720p.mkv", played)
+    }
+}

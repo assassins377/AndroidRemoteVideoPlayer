@@ -1,8 +1,8 @@
 # Android Remote Video Player
 
-**RU:** Android-плеер для видео с компьютера или NAS в домашней сети: SMB (Windows, Samba, Synology/QNAP), WebDAV, HTTP. Плеер на Media3 с жестами, дорожками, PiP и звуком в фоне, внешние субтитры, постеры TMDB, избранное, «Продолжить просмотр».
+**RU:** Android-плеер для видео с компьютера или NAS в домашней сети: SMB (Windows, Samba, Synology/QNAP), WebDAV, HTTP. Плеер на Media3 с жестами, дорожками, PiP и звуком в фоне, внешние субтитры, постеры TMDB, избранное, «Продолжить просмотр», общая библиотека и поиск по всем серверам сразу.
 
-**EN:** Android player for videos on your PC or NAS over the home network: SMB (Windows, Samba, Synology/QNAP), WebDAV, HTTP. Media3 player with gestures, track selection, PiP and background audio, external subtitles, TMDB posters, favourites, Continue watching.
+**EN:** Android player for videos on your PC or NAS over the home network: SMB (Windows, Samba, Synology/QNAP), WebDAV, HTTP. Media3 player with gestures, track selection, PiP and background audio, external subtitles, TMDB posters, favourites, Continue watching, a combined library with search across all servers.
 
 ## 📥 Скачать / Download
 
