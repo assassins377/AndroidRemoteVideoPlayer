@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Добавлено
+- Десктоп: трансляция на Chromecast — собственный минимальный клиент CASTV2 (TLS, protobuf без внешних библиотек, Default Media Receiver: LOAD/PLAY/PAUSE/SEEK/STOP), поиск через mDNS (jmdns, Apache-2.0).
+
 ## [1.2.0] — 2026-10-17
 
 ### Добавлено
