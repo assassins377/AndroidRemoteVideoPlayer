@@ -100,6 +100,8 @@ object Env {
     lateinit var library: LibraryDatabase; private set
     lateinit var stream: StreamServer; private set
     lateinit var downloads: Downloads; private set
+    /** LAN-reachable stream server for casting (started on first use). */
+    val castStream: StreamServer by lazy { StreamServer(null).start() }
 
     fun init(d: Dirs = Dirs.xdg()) {
         dirs = d

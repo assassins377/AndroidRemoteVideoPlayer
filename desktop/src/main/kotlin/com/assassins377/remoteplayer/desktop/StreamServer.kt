@@ -14,19 +14,20 @@ import java.util.concurrent.Executors
  * Loopback HTTP server with Range support: VLC plays http://127.0.0.1:port/<token>/name while bytes come from
  * SMB/WebDAV/HTTP/Jellyfin through the shared clients (auth, pinned certs, retries). Tokens are random; loopback only.
  */
-class StreamServer {
-    private val socket = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
+class StreamServer(bind: InetAddress? = InetAddress.getLoopbackAddress()) {
+    /** bind = null listens on all interfaces (casting: the renderer fetches from the LAN). */
+    private val socket = ServerSocket(0, 50, bind)
     private val pool = Executors.newCachedThreadPool { r -> Thread(r, "stream").apply { isDaemon = true } }
     private val items = ConcurrentHashMap<String, Pair<ServerConfig, String>>()
     val port: Int get() = socket.localPort
 
     fun start(): StreamServer { Thread({ while (!socket.isClosed) runCatching { val s = socket.accept(); pool.execute { handle(s) } } }, "stream-accept").apply { isDaemon = true }.start(); return this }
 
-    fun register(server: ServerConfig, path: String): String {
+    fun register(server: ServerConfig, path: String, host: String = "127.0.0.1"): String {
         val token = ByteArray(12).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
         items[token] = server to path
         val name = java.net.URLEncoder.encode(path.substringAfterLast('/'), "UTF-8").replace("+", "%20")
-        return "http://127.0.0.1:$port/$token/$name"
+        return "http://$host:$port/$token/$name"
     }
 
     private fun handle(s: Socket) = s.use { sock ->
@@ -47,6 +48,9 @@ class StreamServer {
             val end = range?.second?.let { if (size >= 0) minOf(it, size - 1) else it } ?: (size - 1)
             val len = if (size >= 0) end - start + 1 else -1
             val h = linkedMapOf("Accept-Ranges" to "bytes", "Content-Type" to mime(item.second), "Connection" to "close")
+            // DLNA renderers want these to treat the stream as seekable.
+            if (headers.containsKey("getcontentfeatures.dlna.org")) h["contentFeatures.dlna.org"] = Dlna.CONTENT_FEATURES
+            h["transferMode.dlna.org"] = "Streaming"
             if (len >= 0) h["Content-Length"] = len.toString()
             if (range != null && size >= 0) h["Content-Range"] = "bytes $start-$end/$size"
             respond(out, if (range != null) "206 Partial Content" else "200 OK", h)

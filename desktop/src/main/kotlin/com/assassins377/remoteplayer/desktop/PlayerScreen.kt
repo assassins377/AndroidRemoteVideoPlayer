@@ -109,6 +109,19 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
     var subDelay by remember { mutableStateOf(s.subtitleOffsetMs.toLong()) }
     var speed by remember { mutableStateOf(1f) }
     val title = remember(sc) { TitleParser.parse(sc.file.name).display }
+    var castPick by remember { mutableStateOf(false) }
+    var casting by remember { mutableStateOf<Renderer?>(null) }
+    val castScope = rememberCoroutineScope()
+    if (castPick) CastDialog(onDismiss = { castPick = false }, onPick = { r ->
+        castPick = false
+        val at = mp.status().time()
+        castScope.launch(Dispatchers.IO) {
+            runCatching {
+                val url = Env.castStream.register(sc.server, sc.file.path, Dlna.localAddressFor(r.host))
+                Dlna.play(r, url, title, StreamServer.mime(sc.file.name), at)
+            }.onSuccess { mp.controls().setPause(true); casting = r }.onFailure { error = it.message }
+        }
+    })
 
     LaunchedEffect(sc) {
         val url = Env.downloads.localFile(sc.server.id, sc.file.path)?.toURI()?.toString() ?: Env.stream.register(sc.server, sc.file.path)
@@ -172,6 +185,9 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
         Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black)) {
             video.frame.value?.let { androidx.compose.foundation.Image(it, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit) }
             error?.let { Text(it, color = Color.White, modifier = Modifier.align(Alignment.Center)) }
+            casting?.let { r -> Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.85f))) {
+                CastOverlay(r, onStop = { p -> casting = null; if (p > 0) mp.controls().setTime(p) }, modifier = Modifier.align(Alignment.Center))
+            } }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { mp.controls().pause() }) { Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, null) }
@@ -187,6 +203,7 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
                 IconButton(onClick = { nav.replace(Screen.Player(sc.server, n, sc.playlist)) }) { Icon(Icons.Default.SkipNext, Strings["next_episode"]) }
             }
             DelayMenu(audioDelay, subDelay, speed, { audioDelay = it }, { subDelay = it }, { speed = it })
+            IconButton(onClick = { castPick = true }) { Icon(Icons.Default.Cast, Strings["cast"]) }
             IconButton(onClick = { window?.let { it.placement = if (it.placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen } }) {
                 Icon(Icons.Default.Fullscreen, Strings["fullscreen"])
             }
