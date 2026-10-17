@@ -2,8 +2,9 @@ name: Desktop (Linux)
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
+  # Tag builds are run by release.yml after the Android job has created the draft (one draft, no race).
+  workflow_call:
 permissions:
   contents: write
 jobs:
@@ -35,5 +36,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes "Linux desktop build"
+          # release.yml creates the draft first; fall back to creating it only if none exists (drafts are found via list).
+          if ! gh release list --limit 50 --json tagName -q '.[].tagName' | grep -qx "$GITHUB_REF_NAME"; then
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes "Linux desktop build"
+          fi
           gh release upload "$GITHUB_REF_NAME" dist/* --clobber

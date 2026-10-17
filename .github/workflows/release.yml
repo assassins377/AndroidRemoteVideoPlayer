@@ -39,12 +39,23 @@ jobs:
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           "$APKSIGNER" verify app/build/outputs/apk/release/app-release.apk
           cp app/build/outputs/apk/release/app-release.apk "AndroidRemoteVideoPlayer-${GITHUB_REF_NAME#v}-release.apk"
-      - name: Draft GitHub Release
+      - name: Draft GitHub Release (single draft; Linux job attaches to it)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" AndroidRemoteVideoPlayer-*-release.apk \
-            --draft --title "$GITHUB_REF_NAME" --notes "См. CHANGELOG.md"
+          if gh release list --limit 50 --json tagName -q '.[].tagName' | grep -qx "$GITHUB_REF_NAME"; then
+            gh release upload "$GITHUB_REF_NAME" AndroidRemoteVideoPlayer-*-release.apk --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" AndroidRemoteVideoPlayer-*-release.apk \
+              --draft --title "$GITHUB_REF_NAME" --notes "См. CHANGELOG.md"
+          fi
       - name: Cleanup keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/release.jks"
+
+  # Linux desktop artifacts, attached to the same draft after it exists.
+  linux:
+    needs: release
+    uses: ./.github/workflows/desktop.yml
+    permissions:
+      contents: write
