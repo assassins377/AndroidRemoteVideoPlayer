@@ -323,6 +323,9 @@ If TMDB is off or didn't find the film, a frame from the video itself (about 10 
 ### Film details
 A long press on a video opens its card: poster, rating, tagline, genres and runtime (seasons for series), overview, a cast row with photos and a **▶ Trailer (YouTube)** button if TMDB has one. Requires a TMDB key.
 
+### Android TV
+Install the APK on the TV/box (e.g. via "Send files to TV" or adb). The app appears in the TV launcher. Navigate with the remote's arrows and OK; on TV the file list is always a grid and the focused card has a border. In the player: ←/→ seek by the configured step, OK pause/resume, ↑/↓ show the controls (then use the arrows on the buttons); remote ⏪/⏩/⏯ keys work too.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

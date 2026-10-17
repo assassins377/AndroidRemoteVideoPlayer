@@ -18,6 +18,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +54,7 @@ private fun Context.findActivity(): Activity? = when (this) {
 fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewModel()) {
     val s = vm.settings
     LaunchedEffect(uri) { vm.play(uri) }
+    DisposableEffect(Unit) { com.assassins377.remoteplayer.ui.theme.Tv.fullScreen.value = true; onDispose { com.assassins377.remoteplayer.ui.theme.Tv.fullScreen.value = false } }
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
     val ctx = LocalContext.current
     val activity = remember(ctx) { ctx.findActivity() }
@@ -96,7 +100,23 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
     var hint by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(hint) { if (hint != null) { delay(900); hint = null } }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    Box(Modifier.fillMaxSize().background(Color.Black)
+        .focusRequester(focus).focusable()
+        .onPreviewKeyEvent { ev ->
+            if (ev.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+            val visible = playerView?.isControllerFullyVisible == true
+            when (com.assassins377.remoteplayer.ui.theme.Tv.playerAction(ev.nativeKeyEvent.keyCode, visible)) {
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.SEEK_BACK -> { vm.seekBy(-s.seekStepMs); hint = "−" + s.seekStepSec; true }
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.SEEK_FORWARD -> { vm.seekBy(s.seekStepMs); hint = "+" + s.seekStepSec; true }
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.PLAY -> { vm.player.playWhenReady = true; playerView?.showController(); true }
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.PAUSE -> { vm.player.playWhenReady = false; playerView?.showController(); true }
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.TOGGLE_PLAY -> { vm.player.playWhenReady = !vm.player.playWhenReady; playerView?.showController(); true }
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.SHOW_CONTROLS -> { playerView?.showController(); true }
+                com.assassins377.remoteplayer.ui.theme.Tv.PlayerAction.NONE -> false
+            }
+        }) {
         AndroidView(
             factory = { c ->
                 PlayerView(c).apply {

@@ -43,7 +43,9 @@ fun FileBrowserScreen(
 ) {
     LaunchedEffect(serverId) { vm.init(serverId, startPath) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val ctxTv = androidx.compose.ui.platform.LocalContext.current
     val settings by SettingsStore.settings.collectAsStateWithLifecycle()
+    val isTv = remember { com.assassins377.remoteplayer.ui.theme.Tv.isTv(ctxTv) }
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
     LaunchedEffect(state.path) { query = ""; searching = false }
@@ -90,7 +92,7 @@ fun FileBrowserScreen(
                     state.cert?.let { c -> com.assassins377.remoteplayer.ui.servers.CertCard(c) { vm.trust(c) } }
                     Button(onClick = vm::reload) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.retry)) }
                 }
-                settings.grid -> LazyVerticalGrid(GridCells.Adaptive(120.dp), contentPadding = PaddingValues(8.dp)) {
+                settings.grid || isTv -> LazyVerticalGrid(GridCells.Adaptive(if (isTv) 150.dp else 120.dp), contentPadding = PaddingValues(8.dp)) {
                     gridItems(files, key = { it.path }) { f -> FileCard(f, settings, serverId, { onClick(f) }, onDetails) }
                 }
                 files.isEmpty() && query.isNotBlank() -> Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.nothing_found), Modifier.padding(24.dp))

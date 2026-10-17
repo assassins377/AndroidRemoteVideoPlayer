@@ -15,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -127,7 +129,11 @@ fun FileRow(
 @Composable
 fun FileCard(f: RemoteFile, s: AppSettings, serverId: String, onClick: () -> Unit, onDetails: (RemoteFile, ParsedTitle?, TmdbMeta?) -> Unit) {
     val (p, m) = rememberMeta(f, s, serverId)
-    Card(Modifier.padding(4.dp).combinedClickable(onClick = onClick, onLongClick = { if (p != null) onDetails(f, p, m) })) {
+    var focused by remember { mutableStateOf(false) }
+    Card(Modifier.padding(4.dp)
+        .onFocusChanged { focused = it.isFocused }
+        .then(if (focused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium) else Modifier)
+        .combinedClickable(onClick = onClick, onLongClick = { if (p != null) onDetails(f, p, m) })) {
         Column(Modifier.padding(6.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Poster(f, m, Modifier.fillMaxWidth().aspectRatio(2f / 3f), serverId)
             Text(headline(f, p, m), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)

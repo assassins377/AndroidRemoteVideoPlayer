@@ -8,9 +8,13 @@ import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import com.assassins377.remoteplayer.nav.AppNavGraph
 import com.assassins377.remoteplayer.settings.Locales
 import com.assassins377.remoteplayer.settings.SettingsStore
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.assassins377.remoteplayer.ui.player.PipState
 import com.assassins377.remoteplayer.ui.theme.RemotePlayerTheme
 
@@ -23,7 +27,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { RemotePlayerTheme { AppNavGraph() } }
+        val tv = com.assassins377.remoteplayer.ui.theme.Tv.isTv(this)
+        setContent {
+            RemotePlayerTheme {
+                // TV: keep content inside the overscan-safe area (5 % / 48×27 dp).
+                // The player sets fullScreen so video uses the whole display.
+                val full by com.assassins377.remoteplayer.ui.theme.Tv.fullScreen.collectAsState()
+                androidx.compose.foundation.layout.Box(if (tv && !full) androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 27.dp) else androidx.compose.ui.Modifier) { AppNavGraph() }
+            }
+        }
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
