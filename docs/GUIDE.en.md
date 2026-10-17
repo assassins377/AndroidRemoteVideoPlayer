@@ -320,6 +320,9 @@ Limitations: embedded (MKV) subtitles and audio cannot be shifted (not supported
 ### Video thumbnails
 If TMDB is off or didn't find the film, a frame from the video itself (about 10 % in) is shown instead of the film icon. The app reads only the needed parts of the file over the network, one video at a time, and caches the image. Turn off in **Settings → Posters & titles → Frame from video when there is no poster**. "Clear cache" removes thumbnails too.
 
+### Film details
+A long press on a video opens its card: poster, rating, tagline, genres and runtime (seasons for series), overview, a cast row with photos and a **▶ Trailer (YouTube)** button if TMDB has one. Requires a TMDB key.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

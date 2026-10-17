@@ -201,4 +201,8 @@
     <string name="sub_delay_reset">Сбросить задержку</string>
     <string name="sec_unit">с</string>
     <string name="video_thumbnails">Кадр из видео, если нет постера</string>
+    <string name="runtime_fmt">%1$d мин</string>
+    <string name="seasons_fmt">сезонов: %1$d</string>
+    <string name="cast">В ролях</string>
+    <string name="trailer">▶ Трейлер (YouTube)</string>
 </resources>

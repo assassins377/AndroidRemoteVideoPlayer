@@ -40,6 +40,19 @@ data class TmdbMeta(
     fun posterUrl(size: String = "w342"): String? = posterPath?.let { "https://image.tmdb.org/t/p/$size$it" }
 }
 
+@Serializable
+data class TmdbCast(val name: String, val character: String = "", val profilePath: String? = null) {
+    fun photoUrl(size: String = "w185"): String? = profilePath?.let { "https://image.tmdb.org/t/p/$size$it" }
+}
+
+@Serializable
+data class TmdbDetails(
+    val overview: String = "", val rating: Double = 0.0, val genres: List<String> = emptyList(), val runtimeMin: Int? = null,
+    val tagline: String = "", val cast: List<TmdbCast> = emptyList(), val trailerYoutubeKey: String? = null, val seasons: Int? = null,
+) {
+    val trailerUrl: String? get() = trailerYoutubeKey?.let { "https://www.youtube.com/watch?v=$it" }
+}
+
 /** Cache entry: [meta] null = "searched, nothing found" (negative cache, shorter TTL). */
 @Serializable
 data class CacheEntry(val meta: TmdbMeta?, val fetchedAt: Long)
@@ -90,8 +103,49 @@ class TmdbClient(private val key: String, private val language: String) {
         } finally { conn.disconnect() }
     }
 
+    /** /movie|tv/{id} with credits + videos. */
+    fun details(id: Int, tv: Boolean): TmdbDetails {
+        var url = "https://api.themoviedb.org/3/${if (tv) "tv" else "movie"}/$id?language=$language&append_to_response=credits,videos&include_video_language=${language.take(2)},en"
+        val bearer = isBearer(key)
+        if (!bearer) url += "&api_key=" + URLEncoder.encode(key, "UTF-8")
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 8000; readTimeout = 8000
+            setRequestProperty("Accept", "application/json")
+            if (bearer) setRequestProperty("Authorization", "Bearer $key")
+        }
+        try {
+            val code = conn.responseCode
+            if (code == 401) throw TmdbAuthException()
+            if (code !in 200..299) throw IOException("TMDB HTTP $code")
+            return parseDetails(conn.inputStream.use { it.readBytes().decodeToString() }, tv)
+        } finally { conn.disconnect() }
+    }
+
     companion object {
         fun isBearer(key: String) = key.startsWith("eyJ") || key.length > 40
+
+        fun parseDetails(body: String, tv: Boolean): TmdbDetails {
+            val o = Json.parseToJsonElement(body).jsonObject
+            fun JsonObject.str(k: String) = this[k]?.jsonPrimitive?.contentOrNull
+            val runtime = if (tv) o["episode_run_time"]?.jsonArray?.firstOrNull()?.jsonPrimitive?.intOrNull else o["runtime"]?.jsonPrimitive?.intOrNull
+            val cast = o["credits"]?.jsonObject?.get("cast")?.jsonArray.orEmpty().take(12).mapNotNull { c ->
+                val co = c.jsonObject; val name = co.str("name") ?: return@mapNotNull null
+                TmdbCast(name, co.str("character").orEmpty(), co.str("profile_path"))
+            }
+            val videos = o["videos"]?.jsonObject?.get("results")?.jsonArray.orEmpty().map { it.jsonObject }
+                .filter { it.str("site") == "YouTube" && it.str("type") in setOf("Trailer", "Teaser") }
+            val trailer = (videos.firstOrNull { it.str("type") == "Trailer" } ?: videos.firstOrNull())?.str("key")
+            return TmdbDetails(
+                overview = o.str("overview").orEmpty(),
+                rating = o.str("vote_average")?.toDoubleOrNull() ?: 0.0,
+                genres = o["genres"]?.jsonArray.orEmpty().mapNotNull { it.jsonObject.str("name") },
+                runtimeMin = runtime,
+                tagline = o.str("tagline").orEmpty(),
+                cast = cast,
+                trailerYoutubeKey = trailer,
+                seasons = if (tv) o["number_of_seasons"]?.jsonPrimitive?.intOrNull else null,
+            )
+        }
 
         /** First result of a /search response, or null. */
         fun parseSearch(body: String, tv: Boolean): TmdbMeta? = parseSearchAll(body, tv).firstOrNull()
@@ -220,10 +274,27 @@ object TmdbRepository {
         }
     }
 
+    private val detailsCache = HashMap<String, TmdbDetails>()
+
+    /** Full details (overview, genres, cast, trailer); in-memory cache per session. Throws on errors. */
+    suspend fun details(id: Int, tv: Boolean): TmdbDetails? {
+        val s = SettingsStore.current
+        if (s.tmdbKeyEnc.isBlank()) return null
+        val k = "${language(s.language)}|$tv|$id"
+        synchronized(detailsCache) { detailsCache[k] }?.let { return it }
+        val d = withContext(Dispatchers.IO) { TmdbClient(decryptKey(s.tmdbKeyEnc), language(s.language)).details(id, tv) }
+        synchronized(detailsCache) { detailsCache[k] = d }
+        return d
+    }
+
     /** Called when key/toggle changes. */
     fun resetAuth() { authFailed = false }
 
-    fun clearCache() { cache.clear(); file?.delete() }
+    fun clearCache() { cache.clear(); synchronized(detailsCache) { detailsCache.clear() }; file?.delete() }
+
+    /** Media type for details: a manual choice wins over the parsed type. */
+    fun isTv(override: com.assassins377.remoteplayer.meta.TmdbOverride?, parsedSeries: Boolean) =
+        if (override?.meta != null) override.tv else parsedSeries
 
     private fun persist() { val f = file ?: return; runCatching { f.writeText(cache.toJson()) } }
 }
