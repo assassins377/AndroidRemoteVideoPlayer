@@ -44,6 +44,7 @@ fun ServersScreen(nav: Nav) {
     Column {
         Bar(Strings["servers"], null) {
             TextButton(onClick = { nav.go(Screen.Library) }) { Icon(Icons.Default.VideoLibrary, null); Spacer(Modifier.width(6.dp)); Text(Strings["library"]) }
+            IconButton(onClick = { nav.go(Screen.Downloads) }) { Icon(Icons.Default.Download, Strings["downloads"]) }
             IconButton(onClick = { nav.go(Screen.Settings) }) { Icon(Icons.Default.Settings, Strings["settings"]) }
         }
         ContinueRow(nav)
@@ -153,7 +154,9 @@ fun BrowserScreen(nav: Nav, sc: Screen.Browser) {
             else -> LazyColumn {
                 if (sc.server.type == ServerType.JELLYFIN && sc.path.isEmpty()) item { JellyfinResumeRow(nav, sc.server) }
                 items(files!!, key = { it.path }) { f ->
-                    FileItem(f) {
+                    FileItem(f, trailing = if (f.isVideo) ({
+                        IconButton(onClick = { Env.downloads.enqueue(sc.server, f.path, f.name) }) { Icon(Icons.Default.Download, Strings["download"]) }
+                    }) else null) {
                         if (f.isDirectory) nav.go(Screen.Browser(sc.server, f.path.trim('/'))) else if (f.isVideo) nav.go(Screen.Player(sc.server, f))
                     }
                 }
@@ -163,12 +166,13 @@ fun BrowserScreen(nav: Nav, sc: Screen.Browser) {
 }
 
 @Composable
-fun FileItem(f: RemoteFile, subtitle: String? = null, onClick: () -> Unit) {
+fun FileItem(f: RemoteFile, subtitle: String? = null, trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
     val p = remember(f.name) { if (f.isVideo) TitleParser.parse(f.name) else null }
     ListItem(
         leadingContent = { Poster(f, p) },
         headlineContent = { Text(p?.display ?: f.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = { Text(subtitle ?: if (f.isDirectory) "" else TitleParser.formatSize(f.size), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        trailingContent = trailing,
         modifier = Modifier.clickable(onClick = onClick),
     )
 }

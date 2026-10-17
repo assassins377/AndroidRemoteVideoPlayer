@@ -32,6 +32,7 @@ object Strings {
     fun fmt(key: String, vararg a: Any) = get(key).format(*a)
 
     private val RU = mapOf(
+        "downloads" to "Загрузки", "download" to "Скачать", "download_folder" to "Папка загрузок", "no_downloads" to "Загрузок нет", "retry" to "Повторить", "cancel_download" to "Отменить", "remove" to "Удалить", "dl_queued" to "В очереди", "dl_done" to "Готово", "dl_failed" to "Ошибка", "dl_cancelled" to "Отменено", "open_folder" to "Открыть папку",
         "series_view" to "Сериал", "season" to "Сезон %d", "next_episode" to "Следующая серия", "mark_watched" to "Отметить просмотренным", "play_next_unwatched" to "Продолжить",
         "servers" to "Серверы", "add_server" to "Добавить сервер", "edit_server" to "Сервер", "library" to "Библиотека",
         "settings" to "Настройки", "name" to "Название", "type" to "Тип", "host" to "Хост (или хост:порт)", "url" to "Адрес (URL)",
@@ -53,6 +54,7 @@ object Strings {
         "error" to "Ошибка", "about" to "Remote Video Player для Linux", "fullscreen" to "Во весь экран",
     )
     private val EN = mapOf(
+        "downloads" to "Downloads", "download" to "Download", "download_folder" to "Download folder", "no_downloads" to "No downloads", "retry" to "Retry", "cancel_download" to "Cancel", "remove" to "Remove", "dl_queued" to "Queued", "dl_done" to "Done", "dl_failed" to "Failed", "dl_cancelled" to "Cancelled", "open_folder" to "Open folder",
         "series_view" to "Series", "season" to "Season %d", "next_episode" to "Next episode", "mark_watched" to "Toggle watched", "play_next_unwatched" to "Continue",
         "servers" to "Servers", "add_server" to "Add server", "edit_server" to "Server", "library" to "Library",
         "settings" to "Settings", "name" to "Name", "type" to "Type", "host" to "Host (or host:port)", "url" to "Address (URL)",
