@@ -197,4 +197,7 @@
     <string name="mark_unwatched">Снять отметку «просмотрено»</string>
     <string name="up_next_fmt">Следующая серия через %1$d с</string>
     <string name="up_next_play">Смотреть сейчас</string>
+    <string name="sub_delay_fmt">Задержка внешних субтитров: %1$s</string>
+    <string name="sub_delay_reset">Сбросить задержку</string>
+    <string name="sec_unit">с</string>
 </resources>

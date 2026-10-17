@@ -145,7 +145,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         player.playWhenReady = true
     }
 
-    fun play(uri: String) {
+    /** [startMs]/[autoPlay] override resume position and auto-start (used for reloads, e.g. subtitle delay). */
+    fun play(uri: String, startMs: Long? = null, autoPlay: Boolean = true) {
         if (uri == currentUri) return
         savePosition()
         currentUri = uri
@@ -154,8 +155,13 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             val item = MediaItem.Builder().setUri(uri)
             if (settings.autoLoadSubtitles && folder != null) {
                 val ref = PlaybackRef.parse(uri)!!
-                val subs = SubtitleMatcher.find(ref.path.substringAfterLast('/'), folder).map { m ->
-                    MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(ref.withPath(m.file.path)))
+                val delayMs = subtitleDelay(uri)
+                _subDelay.value = delayMs
+                val matches = SubtitleMatcher.find(ref.path.substringAfterLast('/'), folder)
+                _hasExternalSubs.value = matches.isNotEmpty()
+                val subs = matches.map { m ->
+                    val subUri = ref.withPath(m.file.path)
+                    MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(if (delayMs != 0L) shiftedCopy(subUri, m.file.name, delayMs) ?: subUri else subUri))
                         .setMimeType(m.mimeType)
                         .setLanguage(m.language)
                         .setLabel(m.file.name)
@@ -167,10 +173,10 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 item.setSubtitleConfigurations(subs)
             }
-            val start = if (settings.resume) ResumeStore.get(uri) ?: 0L else 0L
+            val start = startMs ?: if (settings.resume) ResumeStore.get(uri) ?: 0L else 0L
             player.setMediaItem(item.build(), start)
             player.prepare()
-            player.playWhenReady = true
+            player.playWhenReady = autoPlay
         }
     }
 
@@ -228,6 +234,40 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         val dur = player.duration.takeIf { it != C.TIME_UNSET } ?: 0
         if (settings.resume) ResumeStore.save(uri, player.currentPosition, dur)
         if (com.assassins377.remoteplayer.settings.WatchedStore.shouldMark(player.currentPosition, dur)) markWatched(uri)
+    }
+
+    private val _subDelay = MutableStateFlow(0L)
+    /** Current external-subtitle delay in ms (+ = later). */
+    val subDelay: StateFlow<Long> = _subDelay.asStateFlow()
+    private val _hasExternalSubs = MutableStateFlow(false)
+    val hasExternalSubs: StateFlow<Boolean> = _hasExternalSubs.asStateFlow()
+
+    private fun subtitleDelay(uri: String) = com.assassins377.remoteplayer.player.SubtitleDelayStore.get(uri) ?: settings.subtitleOffsetMs.toLong()
+
+    /** Downloads the sidecar file, shifts its cue times and stores it in cacheDir; null on failure (unshifted file is used). */
+    private suspend fun shiftedCopy(subUri: String, name: String, ms: Long): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        runCatching {
+            val app = getApplication<Application>()
+            val raw = com.assassins377.remoteplayer.player.RemoteBytes.readAll(app, subUri)
+            val text = runCatching { Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(raw)).toString() }
+                .getOrElse { String(raw, charset("windows-1251")) }
+            val ext = name.substringAfterLast('.', "srt")
+            val dir = java.io.File(app.cacheDir, "subs").apply { mkdirs() }
+            val out = java.io.File(dir, "${(subUri + ms).hashCode().toUInt()}.$ext")
+            out.writeText(com.assassins377.remoteplayer.player.SubtitleShift.shift(text.removePrefix("\uFEFF"), ms, ext))
+            android.net.Uri.fromFile(out).toString()
+        }.getOrNull()
+    }
+
+    /** Changes the subtitle delay for the current file (remembered) and reloads at the same position. */
+    fun setSubtitleDelay(ms: Long) {
+        val uri = currentUri ?: return
+        com.assassins377.remoteplayer.player.SubtitleDelayStore.set(uri, ms)
+        _subDelay.value = ms
+        savePosition()
+        val pos = player.currentPosition; val wasPlaying = player.playWhenReady
+        currentUri = null
+        play(uri, startMs = pos, autoPlay = wasPlaying)
     }
 
     fun setSpeed(value: Float) {

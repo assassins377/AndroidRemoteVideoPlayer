@@ -160,7 +160,10 @@ fun PlayerScreen(uri: String, onBack: () -> Unit, vm: PlayerViewModel = viewMode
                 }
             }
         }
-        if (showTracks) TrackDialog(tracks, onSelect = vm::selectTrack, onDismiss = { showTracks = false })
+        val subDelay by vm.subDelay.collectAsStateWithLifecycle()
+        val hasExt by vm.hasExternalSubs.collectAsStateWithLifecycle()
+        if (showTracks) TrackDialog(tracks, onSelect = vm::selectTrack, onDismiss = { showTracks = false },
+            subDelayMs = subDelay.takeIf { hasExt }, onSubDelay = vm::setSubtitleDelay)
     }
 }
 
@@ -236,7 +239,8 @@ private fun GestureLayer(
 }
 
 @Composable
-private fun TrackDialog(t: TrackOptions, onSelect: (Int, TrackOption?) -> Unit, onDismiss: () -> Unit) {
+private fun TrackDialog(t: TrackOptions, onSelect: (Int, TrackOption?) -> Unit, onDismiss: () -> Unit,
+                        subDelayMs: Long? = null, onSubDelay: (Long) -> Unit = {}) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.close)) } },
@@ -251,6 +255,16 @@ private fun TrackDialog(t: TrackOptions, onSelect: (Int, TrackOption?) -> Unit, 
                     modifier = Modifier.padding(top = 12.dp))
                 TrackRow(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.subs_off), t.textOff) { onSelect(androidx.media3.common.C.TRACK_TYPE_TEXT, null) }
                 t.text.forEach { o -> TrackRow(o.label, o.selected) { onSelect(androidx.media3.common.C.TRACK_TYPE_TEXT, o) } }
+                if (subDelayMs != null) {
+                    Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.sub_delay_fmt, PlayerMath.formatDelay(subDelayMs)),
+                        style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(-500L, -100L, 100L, 500L).forEach { d ->
+                            OutlinedButton(onClick = { onSubDelay(subDelayMs + d) }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text(PlayerMath.formatDelay(d)) }
+                        }
+                    }
+                    TextButton(onClick = { onSubDelay(0) }) { Text(androidx.compose.ui.res.stringResource(com.assassins377.remoteplayer.R.string.sub_delay_reset)) }
+                }
             }
         },
     )
