@@ -54,7 +54,11 @@ object WatchedStore {
         val f = file ?: return
         scope.launch { writer.withLock { runCatching { AtomicFiles.write(f, Json.encodeToString(_items.value.toList())) } } }
     }
-    fun toggle(key: String) = set(key, !isWatched(key))
+    fun toggle(key: String) = set(key, !isWatched(key)).also { onUserChange?.invoke(key, isWatched(key)) }
+
+    /** Hook for server-side sync (Jellyfin); called for user/player changes, not for synced-in states. */
+    @Volatile var onUserChange: ((key: String, watched: Boolean) -> Unit)? = null
+    fun markByUser(key: String, watched: Boolean) { set(key, watched); onUserChange?.invoke(key, watched) }
 
     fun shouldMark(positionMs: Long, durationMs: Long) = durationMs > 0 && positionMs >= durationMs * THRESHOLD
 }

@@ -334,6 +334,10 @@ Limitations: Chromecast plays only formats it supports (usually MP4/H.264, WebM;
 ### Downloads
 Long-press a video → **Download to device**. It downloads in the background (notification with percentage), resumes after network drops and retries on errors. The **Downloads** screen (down arrow on the Servers screen) shows progress, used and free space; the bin deletes a file. Downloaded videos play from Downloads, and also automatically from the phone when opened from the server. Files live in the app's folder (Android/data/…/files/downloads) and are removed with the app.
 
+### Jellyfin
+Add a server of type **Jellyfin**: address like `http://192.168.1.10:8096`, Jellyfin user name and password. **Test connection** logs in. The browser shows Jellyfin libraries (Movies, Shows…) as folders; movies and episodes play directly (original file, no transcoding). Watched marks sync: items played in Jellyfin are marked in the app when the folder is opened, and videos finished in the app (or marked manually in a series) are sent to the server. Jellyfin servers take part in the combined library and search.
+Limitations: the playback position is not sent to Jellyfin (resume works in the app only); no transcoding — if the phone can't decode the codec, the video won't play. Emby probably works too (same API) but is untested. **Plex is not supported**: it uses plex.tv sign-in and a different API — share Plex folders via SMB instead.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

@@ -6,6 +6,7 @@
 
 ## ✨ Новое / What's new
 
+- Jellyfin: вход, библиотеки, просмотрено (Plex — нет) / Jellyfin direct support
 - Загрузки для просмотра без сети / Offline downloads
 - Трансляция: Chromecast и DLNA через локальный прокси / Casting: Chromecast + DLNA via local proxy
 - Android TV: лаунчер, пульт, сетка / Android TV support

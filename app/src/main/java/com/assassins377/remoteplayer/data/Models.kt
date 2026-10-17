@@ -3,7 +3,7 @@ package com.assassins377.remoteplayer.data
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class ServerType { SMB, HTTP, WEBDAV }
+enum class ServerType { SMB, HTTP, WEBDAV, JELLYFIN }
 
 @Serializable
 data class ServerConfig(

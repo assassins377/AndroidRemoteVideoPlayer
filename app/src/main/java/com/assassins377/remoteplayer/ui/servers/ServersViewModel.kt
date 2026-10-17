@@ -69,6 +69,7 @@ class ServersViewModel : ViewModel() {
                         ServerType.SMB -> SmbRepository().testConnection(server.copy(id = server.id.ifBlank { "__test__" }))
                         ServerType.HTTP -> com.assassins377.remoteplayer.data.HttpRepository().testConnection(server.copy(id = server.id.ifBlank { "__test__" }))
                         ServerType.WEBDAV -> WebDavRepository().testConnection(server.copy(id = server.id.ifBlank { "__test__" }))
+                        ServerType.JELLYFIN -> com.assassins377.remoteplayer.data.JellyfinRepository().testConnection(server.copy(id = server.id.ifBlank { "__test__" }))
                     }
                 }
             }.fold({ TestState.Ok }, { TestState.Failed(it.message ?: it.toString(), com.assassins377.remoteplayer.data.CertInfo.from(it)) })
