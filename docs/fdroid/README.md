@@ -49,12 +49,12 @@ apksigner verify --print-certs <signed apk>          # compare with the GitHub f
 ## Store metadata (fastlane)
 
 `fastlane/metadata/android/{en-US,ru-RU}/`: title, short/full description, `changelogs/<versionCode>.txt`
-(10, 11, 12 — add one per release), `en-US/images/icon.png` (512×512) and `phoneScreenshots/` (placeholders
+(10–13 — add one per release), `en-US/images/icon.png` (512×512) and `phoneScreenshots/` (placeholders
 from emulator test runs: splash, empty server list, add-server form — replace with library/player shots).
 
 ## Submitting (later, by the maintainer)
 
-1. Tag a release that contains the `fdroid` flavor; update `versionName/versionCode/commit` in the draft.
+1. The draft targets v1.3.0 (versionCode 13), the first tag with the `fdroid` flavor; bump it for later releases.
 2. Fork fdroiddata, add the file as `metadata/com.assassins377.remoteplayer.yml`, run
    `fdroid lint` and `fdroid build -v -l com.assassins377.remoteplayer`.
 3. Open a merge request (or a Request For Packaging issue).

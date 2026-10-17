@@ -17,6 +17,7 @@
 - Кадры из видео, если нет постера / Video frame thumbnails
 - Задержка субтитров для каждого файла / Per-file subtitle delay
 - Сериалы: сезоны/серии, отметки «просмотрено», следующая серия с отсчётом / Series grouping, watched marks, up-next countdown
+
 ## 📥 Скачать / Download
 
 Последний APK — на странице **[Releases](https://github.com/assassins377/AndroidRemoteVideoPlayer/releases)** (Android 8.0+).
@@ -68,6 +69,7 @@ The `desktop` module (Compose for Desktop) shares the `shared` module with the A
 ## F-Droid
 
 Product flavors `full` (Google Cast) and `fdroid` (no proprietary dependencies, DLNA-only casting); fastlane metadata in `fastlane/metadata/android`; draft fdroiddata recipe and reproducible-build notes in [docs/fdroid](docs/fdroid/README.md).
+
 ## Windows
 
 MSI installer and portable zip are built on `windows-latest` (see `.github/workflows/desktop.yml`) and attached to release drafts. Requires 64-bit VLC 3.x. Details: docs/GUIDE.en.md.

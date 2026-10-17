@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-10-17
+
 ### Добавлено
 - Подготовка к F-Droid: флейвор `fdroid` без Google Cast/Play services (трансляция только DLNA) и флейвор `full` по умолчанию; метаданные fastlane (RU/EN, описания, скриншоты, changelogs по versionCode); черновик рецепта fdroiddata и заметки о воспроизводимой сборке в `docs/fdroid/`; `dependenciesInfo` отключён. Релизный workflow прикладывает подписанный `...-fdroid-release.apk`.
 - Десктоп: трансляция на Chromecast — собственный минимальный клиент CASTV2 (TLS, protobuf без внешних библиотек, Default Media Receiver: LOAD/PLAY/PAUSE/SEEK/STOP), поиск через mDNS (jmdns, Apache-2.0).
