@@ -1,5 +1,6 @@
 package com.assassins377.remoteplayer.desktop
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +20,7 @@ sealed interface Screen {
     data class Browser(val server: ServerConfig, val path: String = "") : Screen
     data object Library : Screen
     data object Settings : Screen
+    data object Downloads : Screen
     data class Player(val server: ServerConfig, val file: RemoteFile, val playlist: List<RemoteFile> = emptyList()) : Screen
     data class Series(val server: ServerConfig, val path: String) : Screen
 }
@@ -59,12 +61,13 @@ fun App(window: WindowState? = null, nav: Nav = remember { Nav(Screen.Servers).a
     val dark = when (s.theme) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; else -> isSystemInDarkTheme() }
     key(s.language) {
         MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
-            Surface {
+            Surface(androidx.compose.ui.Modifier.fillMaxSize()) {
                 when (val sc = nav.current) {
                     Screen.Servers -> ServersScreen(nav)
                     is Screen.Browser -> BrowserScreen(nav, sc)
                     Screen.Library -> LibraryScreen(nav)
                     Screen.Settings -> SettingsScreen(nav)
+                    Screen.Downloads -> DownloadsScreen(nav)
                     is Screen.Player -> PlayerScreen(nav, sc, window)
                     is Screen.Series -> SeriesScreen(nav, sc)
                 }

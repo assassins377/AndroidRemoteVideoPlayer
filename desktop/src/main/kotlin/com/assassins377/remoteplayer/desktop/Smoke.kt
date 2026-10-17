@@ -11,7 +11,9 @@ import javax.imageio.ImageIO
 object Smoke {
     /** REMOTEPLAYER_SMOKE_OPEN = "library" | "series:<serverId>:<path>" | "<serverId>:<path>" (folder or video) — initial screen for smoke screenshots. */
     fun open(nav: Nav) {
+        System.getenv("REMOTEPLAYER_SMOKE_DOWNLOAD")?.let { d -> Env.servers.get(d.substringBefore(':'))?.let { Env.downloads.enqueue(it, d.substringAfter(':'), d.substringAfterLast('/')) } }
         val o = System.getenv("REMOTEPLAYER_SMOKE_OPEN") ?: return
+        if (o == "downloads") { nav.go(Screen.Downloads); return }
         if (o == "library") { nav.go(Screen.Library); return }
         if (o.startsWith("series:")) { val r = o.removePrefix("series:"); Env.servers.get(r.substringBefore(':'))?.let { nav.go(Screen.Series(it, r.substringAfter(':'))) }; return }
         val srv = Env.servers.get(o.substringBefore(':')) ?: return

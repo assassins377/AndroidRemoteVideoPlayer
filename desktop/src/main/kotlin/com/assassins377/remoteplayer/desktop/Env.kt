@@ -99,6 +99,7 @@ object Env {
     lateinit var resume: DesktopResume; private set
     lateinit var library: LibraryDatabase; private set
     lateinit var stream: StreamServer; private set
+    lateinit var downloads: Downloads; private set
 
     fun init(d: Dirs = Dirs.xdg()) {
         dirs = d
@@ -109,6 +110,7 @@ object Env {
         resume = DesktopResume(File(d.data, "resume.json"))
         CoreSettings.provider = { settings.current }
         CoreStrings.lookup = { key -> Strings.android(key) }
+        downloads = Downloads.forServers({ servers }, d)
         WatchedStore.init(d.data)
         // Manual watched toggles on Jellyfin items are mirrored to the server.
         WatchedStore.onUserChange = { key, watched ->

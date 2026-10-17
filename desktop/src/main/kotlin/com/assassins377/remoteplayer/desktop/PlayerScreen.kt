@@ -111,7 +111,7 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
     val title = remember(sc) { TitleParser.parse(sc.file.name).display }
 
     LaunchedEffect(sc) {
-        val url = Env.stream.register(sc.server, sc.file.path)
+        val url = Env.downloads.localFile(sc.server.id, sc.file.path)?.toURI()?.toString() ?: Env.stream.register(sc.server, sc.file.path)
         val jf = (repo as? com.assassins377.remoteplayer.data.JellyfinRepository)
         val start = if (!s.resume) 0L else Env.resume.get(key) ?: jf?.let { withContext(Dispatchers.IO) { it.resumePositionMs(sc.server, sc.file.path) } } ?: 0L
         mp.media().play(url, ":start-time=${start / 1000.0}", ":network-caching=1500")

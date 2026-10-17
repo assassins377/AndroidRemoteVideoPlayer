@@ -404,3 +404,6 @@ In a folder with episodes (SxxEyy or "Season N" subfolders) a "Series" button ap
 
 ### Jellyfin (Linux)
 Add a JELLYFIN server (URL, user, password). The root shows libraries and a server-side "Continue" row; the start position comes from the server when there is no local one, progress/stop is reported back, and watched marks are synced.
+
+### Downloads (Linux)
+The "Download" button on a video in the folder browser queues it (one at a time, with progress; cancel/retry/remove on the Downloads screen). Default folder is `$XDG_VIDEOS_DIR/Remote Video Player` (or `~/Videos/...`), changeable on the Downloads screen. Partial files (`*.part`) resume where they stopped. Downloaded videos play from the local copy.
