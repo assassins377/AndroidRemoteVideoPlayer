@@ -1,7 +1,7 @@
 package com.assassins377.remoteplayer.data
 
 import com.assassins377.remoteplayer.settings.AppSettings
-import com.assassins377.remoteplayer.settings.SettingsStore
+import com.assassins377.remoteplayer.core.CoreSettings
 import com.assassins377.remoteplayer.settings.SmbDialect
 import com.hierynomus.mssmb2.SMB2Dialect
 import com.hierynomus.smbj.SMBClient
@@ -21,7 +21,7 @@ object SmbPool {
 
     /** Client built from current settings; rebuilt by [invalidateAll] when network settings change. */
     val client: SMBClient
-        @Synchronized get() = clientRef ?: SMBClient(buildConfig(SettingsStore.current)).also { clientRef = it }
+        @Synchronized get() = clientRef ?: SMBClient(buildConfig(CoreSettings.current)).also { clientRef = it }
 
     fun dialectsFor(d: SmbDialect): List<SMB2Dialect> = when (d) {
         SmbDialect.AUTO -> listOf(SMB2Dialect.SMB_3_1_1, SMB2Dialect.SMB_3_0_2, SMB2Dialect.SMB_3_0, SMB2Dialect.SMB_2_1, SMB2Dialect.SMB_2_0_2)
@@ -37,7 +37,7 @@ object SmbPool {
         .withReadBufferSize(4 * 1024 * 1024)                   // allow large SMB2 READs (server may cap)
         .build()
 
-    fun defaultPolicy() = RetryPolicy(maxAttempts = SettingsStore.current.retryCount)
+    fun defaultPolicy() = RetryPolicy(maxAttempts = CoreSettings.current.retryCount)
 
     private class Entry(val fingerprint: ServerConfig, val connection: Connection, val session: Session) {
         val shares = HashMap<String, DiskShare>()

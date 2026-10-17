@@ -1,5 +1,9 @@
 package com.assassins377.remoteplayer.library
 
+import com.assassins377.remoteplayer.library.inMemory
+
+import com.assassins377.remoteplayer.library.init
+
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.assassins377.remoteplayer.data.*

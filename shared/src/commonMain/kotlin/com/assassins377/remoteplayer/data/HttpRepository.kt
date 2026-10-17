@@ -79,7 +79,7 @@ class HttpRepository : RemoteFileRepository {
             HttpClients.forServer(server).newCall(Request.Builder().url(url).build()).execute().use { r ->
                 HttpErrors.check(r)
                 val type = r.header("Content-Type").orEmpty()
-                if (!type.contains("html", true)) throw SmbError(SmbErrorKind.UNKNOWN, java.io.IOException(com.assassins377.remoteplayer.AppStrings.get(com.assassins377.remoteplayer.R.string.err_not_listing, "Не страница со списком файлов (%s)", type)))
+                if (!type.contains("html", true)) throw SmbError(SmbErrorKind.UNKNOWN, java.io.IOException(com.assassins377.remoteplayer.core.CoreStrings.get("err_not_listing", "Не страница со списком файлов (%s)", type)))
                 AutoindexParser.parse(r.body!!.string(), path).filter { it.isDirectory || it.isVideo || it.isSubtitle }
             }
         } catch (t: Throwable) { throw HttpErrors.wrap(t) }

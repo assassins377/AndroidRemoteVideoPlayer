@@ -39,9 +39,13 @@ Get the latest APK from **[Releases](https://github.com/assassins377/AndroidRemo
 | SMB | smbj |
 | WebDAV / HTTP | OkHttp |
 | Storage | DataStore, Android Keystore |
+| Library index | Room KMP (FTS4): framework SQLite on Android, bundled SQLite on desktop |
+
+**Modules:** `app` — Android UI/player; `shared` — Kotlin Multiplatform (Android + JVM): SMB/WebDAV/HTTP/Jellyfin clients, TMDB client + cache, title/series parsing, library index and search. Platform glue: `CoreSettings`, `CoreStrings` (strings by resource name), `KeyValue`.
 
 ```bash
 ./gradlew assembleDebug testDebugUnitTest lintDebug   # debug APK + tests (Robolectric, no emulator)
+./gradlew :shared:jvmTest                             # shared module on the desktop JVM (bundled SQLite)
 ./gradlew assembleRelease                             # R8-minified; signed if KEYSTORE_FILE/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD are set
 ```
 

@@ -1,5 +1,9 @@
 package com.assassins377.remoteplayer.ui
 
+import com.assassins377.remoteplayer.library.inMemory
+
+import com.assassins377.remoteplayer.library.init
+
 import android.app.Application
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule

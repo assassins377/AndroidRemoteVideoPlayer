@@ -1,9 +1,6 @@
 package com.assassins377.remoteplayer.library
 
-import android.content.Context
 import androidx.room.*
-import androidx.sqlite.db.SimpleSQLiteQuery
-import androidx.sqlite.db.SupportSQLiteQuery
 import kotlinx.coroutines.flow.Flow
 
 /** One indexed video file (Room row). search* columns are normalized (lowercase, ё→е) for FTS. */
@@ -65,35 +62,52 @@ interface LibraryDao {
     suspend fun episodes(key: String, live: List<String>): List<EntryRow>
 
     @RawQuery(observedEntities = [EntryRow::class])
-    fun observeSeries(q: SupportSQLiteQuery): Flow<List<SeriesRow>>
+    fun observeSeries(q: RoomRawQuery): Flow<List<SeriesRow>>
 
-    @RawQuery suspend fun series(q: SupportSQLiteQuery): List<SeriesRow>
+    @RawQuery suspend fun series(q: RoomRawQuery): List<SeriesRow>
 
     @Query("SELECT COUNT(*) FROM entries") suspend fun count(): Int
 
     @RawQuery(observedEntities = [EntryRow::class])
-    fun observe(q: SupportSQLiteQuery): Flow<List<EntryRow>>
+    fun observe(q: RoomRawQuery): Flow<List<EntryRow>>
 
-    @RawQuery suspend fun query(q: SupportSQLiteQuery): List<EntryRow>
+    @RawQuery suspend fun query(q: RoomRawQuery): List<EntryRow>
 
     @RawQuery(observedEntities = [EntryRow::class])
-    fun observeCount(q: SupportSQLiteQuery): Flow<Int>
+    fun observeCount(q: RoomRawQuery): Flow<Int>
 
-    @RawQuery suspend fun queryCount(q: SupportSQLiteQuery): Int
+    @RawQuery suspend fun queryCount(q: RoomRawQuery): Int
 
-    @RawQuery suspend fun strings(q: SupportSQLiteQuery): List<String>
+    @RawQuery suspend fun strings(q: RoomRawQuery): List<String>
     @RawQuery(observedEntities = [EntryRow::class])
-    fun observeStrings(q: SupportSQLiteQuery): Flow<List<String>>
+    fun observeStrings(q: RoomRawQuery): Flow<List<String>>
 }
 
+/**
+ * Same schema (v2) as before the move to Room KMP, so existing Android databases open unchanged.
+ * Android uses the framework SQLite; desktop uses the bundled SQLite driver (see platform `open`).
+ */
 @Database(entities = [EntryRow::class, EntryFts::class], version = 2, exportSchema = false)
+@ConstructedBy(LibraryDatabaseConstructor::class)
 abstract class LibraryDatabase : RoomDatabase() {
     abstract fun dao(): LibraryDao
+    companion object
+}
 
-    companion object {
-        fun open(ctx: Context): LibraryDatabase = Room.databaseBuilder(ctx, LibraryDatabase::class.java, "library.db")
-            .fallbackToDestructiveMigration(true).build()
-        fun inMemory(ctx: Context): LibraryDatabase = Room.inMemoryDatabaseBuilder(ctx, LibraryDatabase::class.java).build()
+@Suppress("NO_ACTUAL_FOR_EXPECT", "EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
+expect object LibraryDatabaseConstructor : RoomDatabaseConstructor<LibraryDatabase> {
+    override fun initialize(): LibraryDatabase
+}
+
+/** Raw query with positional args (String/Long/Int). */
+fun rawQuery(sql: String, args: List<Any>): RoomRawQuery = RoomRawQuery(sql) { st ->
+    args.forEachIndexed { i, a ->
+        when (a) {
+            is String -> st.bindText(i + 1, a)
+            is Long -> st.bindLong(i + 1, a)
+            is Int -> st.bindLong(i + 1, a.toLong())
+            else -> st.bindText(i + 1, a.toString())
+        }
     }
 }
 
@@ -117,10 +131,10 @@ object LibrarySql {
     private fun words(s: String) = normalize(s).split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
 
     /** Distinct title suggestions for the current input. */
-    fun suggestions(query: String, live: Collection<String>, limit: Int = 8, servers: Collection<String>? = null, mode: LibraryMode = LibraryMode.ALL): SupportSQLiteQuery? {
+    fun suggestions(query: String, live: Collection<String>, limit: Int = 8, servers: Collection<String>? = null, mode: LibraryMode = LibraryMode.ALL): RoomRawQuery? {
         if (match(query) == null) return null
         val args = mutableListOf<Any>()
-        return SimpleSQLiteQuery("SELECT COALESCE(seriesTitle, title) FROM entries WHERE ${where(query, servers, live, args, mode)} GROUP BY COALESCE(seriesKey, titleSort) ORDER BY COALESCE(seriesTitle, titleSort) LIMIT $limit", args.toTypedArray())
+        return rawQuery("SELECT COALESCE(seriesTitle, title) FROM entries WHERE ${where(query, servers, live, args, mode)} GROUP BY COALESCE(seriesKey, titleSort) ORDER BY COALESCE(seriesTitle, titleSort) LIMIT $limit", args)
     }
 
     private fun where(query: String, servers: Collection<String>?, live: Collection<String>, args: MutableList<Any>, mode: LibraryMode = LibraryMode.ALL): String {
@@ -133,7 +147,7 @@ object LibrarySql {
         return c.joinToString(" AND ")
     }
 
-    fun list(query: String, servers: Collection<String>?, sort: LibrarySort, live: Collection<String>, limit: Int, offset: Int = 0, mode: LibraryMode = LibraryMode.ALL): SupportSQLiteQuery {
+    fun list(query: String, servers: Collection<String>?, sort: LibrarySort, live: Collection<String>, limit: Int, offset: Int = 0, mode: LibraryMode = LibraryMode.ALL): RoomRawQuery {
         val args = mutableListOf<Any>()
         val order = when (sort) {
             LibrarySort.TITLE -> "titleSort, path"
@@ -141,22 +155,22 @@ object LibrarySql {
             LibrarySort.ADDED -> "addedAt DESC, titleSort, path"
         }
         val sql = "SELECT * FROM entries WHERE ${where(query, servers, live, args, mode)} ORDER BY $order LIMIT $limit OFFSET $offset"
-        return SimpleSQLiteQuery(sql, args.toTypedArray())
+        return rawQuery(sql, args)
     }
 
-    fun count(query: String, servers: Collection<String>?, live: Collection<String>, mode: LibraryMode = LibraryMode.ALL): SupportSQLiteQuery {
+    fun count(query: String, servers: Collection<String>?, live: Collection<String>, mode: LibraryMode = LibraryMode.ALL): RoomRawQuery {
         val args = mutableListOf<Any>()
         val what = if (mode == LibraryMode.SERIES) "COUNT(DISTINCT seriesKey)" else "COUNT(*)"
-        return SimpleSQLiteQuery("SELECT $what FROM entries WHERE ${where(query, servers, live, args, mode)}", args.toTypedArray())
+        return rawQuery("SELECT $what FROM entries WHERE ${where(query, servers, live, args, mode)}", args)
     }
 
     /** Series grouped by seriesKey (search/filter apply to episodes). */
-    fun series(query: String, servers: Collection<String>?, sort: LibrarySort, live: Collection<String>, limit: Int): SupportSQLiteQuery {
+    fun series(query: String, servers: Collection<String>?, sort: LibrarySort, live: Collection<String>, limit: Int): RoomRawQuery {
         val args = mutableListOf<Any>()
         val order = when (sort) { LibrarySort.ADDED -> "addedAt DESC, seriesTitle"; else -> "LOWER(seriesTitle)" }
         val sql = "SELECT seriesKey, MIN(seriesTitle) AS seriesTitle, COUNT(*) AS episodes, COUNT(DISTINCT season) AS seasons, " +
             "MAX(addedAt) AS addedAt, MIN(path) AS samplePath, MIN(serverId) AS sampleServer FROM entries " +
             "WHERE seriesKey IS NOT NULL AND ${where(query, servers, live, args)} GROUP BY seriesKey ORDER BY $order LIMIT $limit"
-        return SimpleSQLiteQuery(sql, args.toTypedArray())
+        return rawQuery(sql, args)
     }
 }

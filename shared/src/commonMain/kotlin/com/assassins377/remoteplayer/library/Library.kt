@@ -1,12 +1,11 @@
 package com.assassins377.remoteplayer.library
 
-import android.content.Context
 import com.assassins377.remoteplayer.data.RemoteFile
 import com.assassins377.remoteplayer.data.RemoteFileRepository
 import com.assassins377.remoteplayer.data.ServerConfig
-import com.assassins377.remoteplayer.data.ServerStore
+import com.assassins377.remoteplayer.core.KeyValue
 import com.assassins377.remoteplayer.meta.TitleParser
-import com.assassins377.remoteplayer.settings.SettingsStore
+import com.assassins377.remoteplayer.core.CoreSettings
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,18 +118,22 @@ object LibraryStore {
     val state: StateFlow<LibraryState> = _state.asStateFlow()
     @Volatile private var _db: LibraryDatabase? = null
     val db: LibraryDatabase get() = _db ?: error("LibraryStore not initialised")
-    private var prefs: android.content.SharedPreferences? = null
+    private var prefs: KeyValue? = null
     private var job: Job? = null
+    /** Configured servers and their repositories; installed by the platform. */
+    @Volatile var servers: () -> List<ServerConfig> = { emptyList() }
+    @Volatile var repositoryFor: (ServerConfig) -> RemoteFileRepository = { com.assassins377.remoteplayer.data.Repositories.forType(it.type) }
 
-    fun init(ctx: Context, database: LibraryDatabase = LibraryDatabase.open(ctx.applicationContext)) {
+    /** [meta]: small key-value store ("library_meta"); [dataDir]: where a legacy library.json may exist. */
+    fun init(database: LibraryDatabase, meta: KeyValue, dataDir: File?) {
         _db = database
-        prefs = ctx.getSharedPreferences("library_meta", Context.MODE_PRIVATE)
-        RecentSearches.init(ctx)
-        _state.value = LibraryState(updatedAt = prefs?.getLong("updatedAt", 0) ?: 0)
-        val legacy = File(ctx.filesDir, "library.json")
+        prefs = meta
+        RecentSearches.init(meta)
+        _state.value = LibraryState(updatedAt = meta.getLong("updatedAt", 0))
+        val legacy = File(dataDir ?: File("/nonexistent"), "library.json")
         scope.launch {
             if (legacy.exists()) runCatching { importLegacy(legacy.readText()) }.also { legacy.delete() }
-            if (SettingsStore.current.libraryRefreshOnStart) refresh()
+            if (CoreSettings.current.libraryRefreshOnStart) refresh()
         }
     }
 
@@ -145,7 +148,7 @@ object LibraryStore {
         return rows.size
     }
 
-    private fun setUpdated(t: Long) { prefs?.edit()?.putLong("updatedAt", t)?.apply(); _state.update { it.copy(updatedAt = t) } }
+    private fun setUpdated(t: Long) { prefs?.putLong("updatedAt", t); _state.update { it.copy(updatedAt = t) } }
 
     @Synchronized fun refresh(): Job {
         job?.takeIf { it.isActive }?.let { return it }
@@ -155,10 +158,10 @@ object LibraryStore {
     @Synchronized fun cancel() { job?.cancel() }
 
     suspend fun refreshNow(
-        servers: List<ServerConfig> = ServerStore.servers.value,
-        repoFor: (ServerConfig) -> RemoteFileRepository = { ServerStore.repositoryFor(it.type) },
+        servers: List<ServerConfig> = this.servers(),
+        repoFor: (ServerConfig) -> RemoteFileRepository = repositoryFor,
     ) {
-        val s = SettingsStore.current
+        val s = CoreSettings.current
         val roots = LibraryScanner.parseRoots(s.libraryRoots)
         val dao = db.dao()
         _state.update { it.copy(scanning = true, progress = servers.associate { srv -> srv.id to ServerProgress(srv.name) }) }
@@ -203,7 +206,7 @@ object LibraryStore {
         dao.deleteStale(srv.id, scanId)
     }
 
-    suspend fun clear() { job?.cancelAndJoin(); db.dao().clear(); prefs?.edit()?.remove("updatedAt")?.apply(); _state.value = LibraryState() }
+    suspend fun clear() { job?.cancelAndJoin(); db.dao().clear(); prefs?.putString("updatedAt", null); _state.value = LibraryState() }
 }
 
 data class EpisodeInfo(val title: String, val season: Int, val episode: Int?, val year: Int? = null)
@@ -242,17 +245,17 @@ object Episodes {
 
 /** Last 10 library searches (SharedPreferences "library_meta"). */
 object RecentSearches {
-    private var prefs: android.content.SharedPreferences? = null
+    private var prefs: KeyValue? = null
     private val _items = MutableStateFlow<List<String>>(emptyList())
     val items: StateFlow<List<String>> = _items.asStateFlow()
-    fun init(ctx: Context) {
-        prefs = ctx.getSharedPreferences("library_meta", Context.MODE_PRIVATE)
-        _items.value = prefs?.getString("recent", "")?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
+    fun init(meta: KeyValue) {
+        prefs = meta
+        _items.value = meta.getString("recent")?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
     }
     fun add(q: String) {
         val t = q.trim(); if (t.length < 2) return
-        _items.value = push(_items.value, t); prefs?.edit()?.putString("recent", _items.value.joinToString("\n"))?.apply()
+        _items.value = push(_items.value, t); prefs?.putString("recent", _items.value.joinToString("\n"))
     }
-    fun clear() { _items.value = emptyList(); prefs?.edit()?.remove("recent")?.apply() }
+    fun clear() { _items.value = emptyList(); prefs?.putString("recent", null) }
     fun push(list: List<String>, q: String, max: Int = 10) = (listOf(q) + list.filterNot { it.equals(q, ignoreCase = true) }).take(max)
 }

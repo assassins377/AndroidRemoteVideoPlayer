@@ -1,6 +1,5 @@
 package com.assassins377.remoteplayer.settings
 
-import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,8 +23,9 @@ object WatchedStore {
 
     fun key(serverId: String, path: String) = "$serverId/${path.trim('/')}"
 
-    fun init(ctx: Context) {
-        file = File(ctx.filesDir, "watched.json").also { f ->
+    /** [dir]: app data directory (Android filesDir); marks live in watched.json. */
+    fun init(dir: File) {
+        file = File(dir, "watched.json").also { f ->
             if (f.exists()) runCatching { _items.value = Json.decodeFromString<List<String>>(f.readText()).toSet() }
         }
     }
