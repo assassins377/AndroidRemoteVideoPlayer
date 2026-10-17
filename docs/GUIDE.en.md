@@ -407,3 +407,6 @@ Add a JELLYFIN server (URL, user, password). The root shows libraries and a serv
 
 ### Downloads (Linux)
 The "Download" button on a video in the folder browser queues it (one at a time, with progress; cancel/retry/remove on the Downloads screen). Default folder is `$XDG_VIDEOS_DIR/Remote Video Player` (or `~/Videos/...`), changeable on the Downloads screen. Partial files (`*.part`) resume where they stopped. Downloaded videos play from the local copy.
+
+### Casting (Linux)
+The "Cast" button in the player discovers DLNA/UPnP renderers (TVs, set-top boxes, Kodi, gmediarender) via SSDP and sends the video through a LAN-reachable local HTTP proxy (random port, random-token URLs; allow incoming connections in your firewall). Controls: pause, seek, stop (returns to local playback at the same position). Chromecast is not supported yet.

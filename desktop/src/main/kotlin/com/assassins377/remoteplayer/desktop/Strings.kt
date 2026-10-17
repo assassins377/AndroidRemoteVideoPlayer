@@ -32,6 +32,7 @@ object Strings {
     fun fmt(key: String, vararg a: Any) = get(key).format(*a)
 
     private val RU = mapOf(
+        "cast" to "Трансляция", "close" to "Закрыть", "cast_to" to "Транслировать на устройство", "cast_searching" to "Поиск DLNA-устройств в сети…", "cast_none" to "DLNA-устройства не найдены", "casting_to" to "Воспроизводится на %s", "cast_stop" to "Остановить трансляцию",
         "downloads" to "Загрузки", "download" to "Скачать", "download_folder" to "Папка загрузок", "no_downloads" to "Загрузок нет", "retry" to "Повторить", "cancel_download" to "Отменить", "remove" to "Удалить", "dl_queued" to "В очереди", "dl_done" to "Готово", "dl_failed" to "Ошибка", "dl_cancelled" to "Отменено", "open_folder" to "Открыть папку",
         "series_view" to "Сериал", "season" to "Сезон %d", "next_episode" to "Следующая серия", "mark_watched" to "Отметить просмотренным", "play_next_unwatched" to "Продолжить",
         "servers" to "Серверы", "add_server" to "Добавить сервер", "edit_server" to "Сервер", "library" to "Библиотека",
@@ -54,6 +55,7 @@ object Strings {
         "error" to "Ошибка", "about" to "Remote Video Player для Linux", "fullscreen" to "Во весь экран",
     )
     private val EN = mapOf(
+        "cast" to "Cast", "close" to "Close", "cast_to" to "Cast to device", "cast_searching" to "Searching for DLNA devices…", "cast_none" to "No DLNA devices found", "casting_to" to "Playing on %s", "cast_stop" to "Stop casting",
         "downloads" to "Downloads", "download" to "Download", "download_folder" to "Download folder", "no_downloads" to "No downloads", "retry" to "Retry", "cancel_download" to "Cancel", "remove" to "Remove", "dl_queued" to "Queued", "dl_done" to "Done", "dl_failed" to "Failed", "dl_cancelled" to "Cancelled", "open_folder" to "Open folder",
         "series_view" to "Series", "season" to "Season %d", "next_episode" to "Next episode", "mark_watched" to "Toggle watched", "play_next_unwatched" to "Continue",
         "servers" to "Servers", "add_server" to "Add server", "edit_server" to "Server", "library" to "Library",
