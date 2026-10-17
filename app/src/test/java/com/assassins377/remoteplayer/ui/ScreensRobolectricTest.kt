@@ -164,8 +164,9 @@ class LibraryScreenRobolectricTest {
         compose.onAllNodesWithText("The Matrix (1999)").assertCountEquals(0)
         compose.onNodeWithText("Все серверы").assertExists()
         compose.onAllNodesWithText("Сервер 2")[0].performClick() // filter chip
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Брат (1997)").fetchSemanticsNodes().size == 1 }
-        compose.onNodeWithText("Брат (1997)").performClick()
+        // one suggestion chip + one list row
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Брат (1997)").fetchSemanticsNodes().size == 2 }
+        compose.onAllNodesWithText("Брат (1997)")[1].performClick()
         assertEquals("fake://Брат.1997.720p.mkv", played)
     }
 }

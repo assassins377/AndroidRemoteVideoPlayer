@@ -125,6 +125,7 @@ object LibraryStore {
     fun init(ctx: Context, database: LibraryDatabase = LibraryDatabase.open(ctx.applicationContext)) {
         _db = database
         prefs = ctx.getSharedPreferences("library_meta", Context.MODE_PRIVATE)
+        RecentSearches.init(ctx)
         _state.value = LibraryState(updatedAt = prefs?.getLong("updatedAt", 0) ?: 0)
         val legacy = File(ctx.filesDir, "library.json")
         scope.launch {
@@ -237,4 +238,21 @@ object Episodes {
         val i = ordered.indexOfFirst { it.serverId == current.serverId && it.path == current.path }
         return if (i >= 0) ordered.getOrNull(i + 1) else null
     }
+}
+
+/** Last 10 library searches (SharedPreferences "library_meta"). */
+object RecentSearches {
+    private var prefs: android.content.SharedPreferences? = null
+    private val _items = MutableStateFlow<List<String>>(emptyList())
+    val items: StateFlow<List<String>> = _items.asStateFlow()
+    fun init(ctx: Context) {
+        prefs = ctx.getSharedPreferences("library_meta", Context.MODE_PRIVATE)
+        _items.value = prefs?.getString("recent", "")?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
+    }
+    fun add(q: String) {
+        val t = q.trim(); if (t.length < 2) return
+        _items.value = push(_items.value, t); prefs?.edit()?.putString("recent", _items.value.joinToString("\n"))?.apply()
+    }
+    fun clear() { _items.value = emptyList(); prefs?.edit()?.remove("recent")?.apply() }
+    fun push(list: List<String>, q: String, max: Int = 10) = (listOf(q) + list.filterNot { it.equals(q, ignoreCase = true) }).take(max)
 }

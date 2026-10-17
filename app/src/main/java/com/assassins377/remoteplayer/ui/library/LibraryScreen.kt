@@ -1,5 +1,6 @@
 package com.assassins377.remoteplayer.ui.library
 
+import kotlinx.coroutines.flow.catch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -85,8 +87,25 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
                         Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
                 }
             }
+            var focused by remember { mutableStateOf(false) }
+            val recent by RecentSearches.items.collectAsStateWithLifecycle()
+            // Same filters as the list; re-emits as scan batches arrive.
+            val suggestions by remember(query, live, filter, mode) {
+                LibrarySql.suggestions(query, live, servers = filter, mode = mode)?.let { q -> dao.observeStrings(q).catch { emit(emptyList()) } }
+                    ?: kotlinx.coroutines.flow.flowOf(emptyList())
+            }.collectAsStateWithLifecycle(initialValue = emptyList())
             OutlinedTextField(input, { input = it }, placeholder = { Text(stringResource(R.string.library_search_hint)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
+                singleLine = true,
+                trailingIcon = { if (input.isNotEmpty()) IconButton(onClick = { input = "" }) { Icon(Icons.Default.Close, stringResource(R.string.clear)) } },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { RecentSearches.add(input) }),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+                    .onFocusChanged { focused = it.isFocused })
+            val chips = if (input.isBlank()) recent.takeIf { focused }.orEmpty() else suggestions.filterNot { it.equals(input.trim(), true) }
+            if (chips.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                chips.forEach { c -> SuggestionChip(onClick = { input = c; query = c; RecentSearches.add(c) }, label = { Text(c, maxLines = 1) }) }
+                if (input.isBlank()) TextButton(onClick = { RecentSearches.clear() }) { Text(stringResource(R.string.clear)) }
+            }
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(LibraryMode.ALL to R.string.library_mode_all, LibraryMode.MOVIES to R.string.library_mode_movies,
                     LibraryMode.SERIES to R.string.library_mode_series).forEach { (k, label) ->
@@ -117,7 +136,7 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
             when {
                 mode == LibraryMode.SERIES -> if (seriesList.isEmpty() && !st.scanning) Text(stringResource(R.string.library_nothing_found), Modifier.padding(24.dp))
                     else LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                        items(seriesList, key = { it.seriesKey }) { sr -> SeriesItem(sr, settings) { onOpenSeries(sr.seriesKey) } }
+                        items(seriesList, key = { it.seriesKey }) { sr -> SeriesItem(sr, settings) { if (query.isNotBlank()) RecentSearches.add(query); onOpenSeries(sr.seriesKey) } }
                     }
                 rows == null -> {}
                 rows.isEmpty() && !st.scanning -> Text(stringResource(if (query.isBlank() && serverFilter == null) R.string.library_empty else R.string.library_nothing_found), Modifier.padding(24.dp))
@@ -136,7 +155,7 @@ fun LibraryScreen(onPlay: (String) -> Unit, onBack: () -> Unit, onOpenSeries: (S
                                 }
                             },
                             trailingContent = { AssistChip(onClick = { serverFilter = server.id }, label = { Text(server.name, maxLines = 1) }) },
-                            modifier = Modifier.clickable { onPlay(ServerStore.repositoryFor(server.type).playbackUri(server, f)) },
+                            modifier = Modifier.clickable { if (query.isNotBlank()) RecentSearches.add(query); onPlay(ServerStore.repositoryFor(server.type).playbackUri(server, f)) },
                         )
                     }
                 }

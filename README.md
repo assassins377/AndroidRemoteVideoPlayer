@@ -6,6 +6,7 @@
 
 ## ✨ Новое / What's new
 
+- Подсказки и фразовый поиск / Search suggestions & phrases
 - Jellyfin: вход, библиотеки, просмотрено (Plex — нет) / Jellyfin direct support
 - Загрузки для просмотра без сети / Offline downloads
 - Трансляция: Chromecast и DLNA через локальный прокси / Casting: Chromecast + DLNA via local proxy
