@@ -142,6 +142,8 @@ fun BrowserScreen(nav: Nav, sc: Screen.Browser) {
     }
     Column {
         Bar(sc.server.name + (if (sc.path.isNotEmpty()) " / " + sc.path else ""), nav::back) {
+            if (files?.let { com.assassins377.remoteplayer.meta.SeriesGrouper.looksLikeSeries(it) } == true)
+                IconButton(onClick = { nav.go(Screen.Series(sc.server, sc.path)) }) { Icon(Icons.Default.VideoLibrary, Strings["series_view"]) }
             IconButton(onClick = { reload++ }) { Icon(Icons.Default.Refresh, Strings["refresh"]) }
         }
         when {

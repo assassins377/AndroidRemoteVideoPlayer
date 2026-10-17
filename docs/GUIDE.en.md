@@ -398,3 +398,6 @@ The `desktop` module (Compose for Desktop) shares the `shared` module with the A
 `sudo apt install vlc ./remote-video-player_<version>-1_amd64.deb`, or extract `remote-video-player-<version>-linux-x64.tar.gz` and run `remote-video-player/bin/remote-video-player`.
 
 A `RemoteVideoPlayer-<version>-x86_64.AppImage` is also provided: `chmod +x` and run it (VLC must be installed). The .deb depends on `libvlc5 | vlc`.
+
+### Series (Linux)
+In a folder with episodes (SxxEyy or "Season N" subfolders) a "Series" button appears: seasons and episodes, watched marks, "Continue" from the first unwatched one, autoplay of the next episode (autoplayNext setting) and a "Next episode" button in the player.

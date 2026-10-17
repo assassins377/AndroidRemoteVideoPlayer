@@ -398,3 +398,6 @@ Film.eng.forced.ass
 `sudo apt install vlc ./remote-video-player_<версия>-1_amd64.deb` или распакуйте `remote-video-player-<версия>-linux-x64.tar.gz` и запустите `remote-video-player/bin/remote-video-player`.
 
 Также доступен `RemoteVideoPlayer-<версия>-x86_64.AppImage`: `chmod +x` и запуск (нужен установленный VLC). Пакет .deb зависит от `libvlc5 | vlc`.
+
+### Сериалы (Linux)
+В папке с сериями (SxxEyy или подпапки «Season N»/«Сезон N») на панели появляется кнопка «Сериал»: сезоны и серии, отметки просмотра, «Продолжить» с первой непросмотренной, автозапуск следующей серии (настройка «autoplayNext») и кнопка «Следующая серия» в плеере.
