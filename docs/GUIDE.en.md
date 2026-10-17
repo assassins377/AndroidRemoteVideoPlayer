@@ -410,3 +410,10 @@ The "Download" button on a video in the folder browser queues it (one at a time,
 
 ### Casting (Linux)
 The "Cast" button in the player discovers DLNA/UPnP renderers (TVs, set-top boxes, Kodi, gmediarender) via SSDP and sends the video through a LAN-reachable local HTTP proxy (random port, random-token URLs; allow incoming connections in your firewall). Controls: pause, seek, stop (returns to local playback at the same position). Chromecast is not supported yet.
+
+## Windows (desktop)
+
+- Installer `RemoteVideoPlayer-<version>-windows-x64.msi` (per-user install, folder choice) or the portable `...-windows-x64-portable.zip` (extract and run `remote-video-player.exe`).
+- Requires **64-bit VLC 3.x** (https://www.videolan.org/vlc/). The app looks it up in the registry (`HKLM\SOFTWARE\VideoLAN\VLC\InstallDir`) and in `C:\Program Files\VideoLAN\VLC`; if VLC is missing the player shows a message with a link.
+- Passwords are stored in **Windows Credential Manager** (`RemoteVideoPlayer/...` entries); if unavailable, in a file encrypted with the current user's DPAPI key.
+- Data: `%APPDATA%\RemoteVideoPlayer` (servers, settings), `%LOCALAPPDATA%\RemoteVideoPlayer` (library, positions, cache), downloads in `%USERPROFILE%\Videos\Remote Video Player`.
