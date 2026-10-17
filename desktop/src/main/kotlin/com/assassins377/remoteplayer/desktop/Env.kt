@@ -1,5 +1,6 @@
 package com.assassins377.remoteplayer.desktop
 
+import kotlinx.coroutines.launch
 import com.assassins377.remoteplayer.core.CoreSettings
 import com.assassins377.remoteplayer.core.CoreStrings
 import com.assassins377.remoteplayer.core.FileKeyValue
@@ -109,6 +110,13 @@ object Env {
         CoreSettings.provider = { settings.current }
         CoreStrings.lookup = { key -> Strings.android(key) }
         WatchedStore.init(d.data)
+        // Manual watched toggles on Jellyfin items are mirrored to the server.
+        WatchedStore.onUserChange = { key, watched ->
+            val id = key.substringBefore('/')
+            servers.get(id)?.takeIf { it.type == com.assassins377.remoteplayer.data.ServerType.JELLYFIN }?.let { srv ->
+                kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) { com.assassins377.remoteplayer.data.JellyfinRepository().setPlayed(srv, key.substringAfter('/'), watched) }
+            }
+        }
         library = LibraryDatabase.open(File(d.data, "library.db"))
         LibraryStore.servers = { servers.servers.value }
         LibraryStore.repositoryFor = { Repositories.forType(it.type) }
