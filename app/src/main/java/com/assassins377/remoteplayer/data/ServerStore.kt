@@ -75,10 +75,10 @@ object ServerStore {
     @androidx.annotation.VisibleForTesting
     var repositoryOverride: ((ServerType) -> RemoteFileRepository)? = null
 
-    fun repositoryFor(type: ServerType): RemoteFileRepository = repositoryOverride?.invoke(type) ?: when (type) {
-        ServerType.SMB -> SmbRepository()
-        ServerType.HTTP -> HttpRepository()
-        ServerType.WEBDAV -> WebDavRepository()
-        ServerType.JELLYFIN -> JellyfinRepository()
+    fun repositoryFor(type: ServerType): RemoteFileRepository = repositoryOverride?.invoke(type) ?: Repositories.forType(type)
+
+    init {
+        com.assassins377.remoteplayer.library.LibraryStore.servers = { servers.value }
+        com.assassins377.remoteplayer.library.LibraryStore.repositoryFor = { repositoryFor(it.type) }
     }
 }

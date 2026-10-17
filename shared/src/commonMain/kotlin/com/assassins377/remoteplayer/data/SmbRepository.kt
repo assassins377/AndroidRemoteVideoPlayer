@@ -3,7 +3,7 @@ package com.assassins377.remoteplayer.data
 import com.hierynomus.msfscc.FileAttributes
 import com.rapid7.client.dcerpc.mssrvs.ServerService
 import com.rapid7.client.dcerpc.transport.SMBTransportFactories
-import com.assassins377.remoteplayer.settings.SettingsStore
+import com.assassins377.remoteplayer.core.CoreSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -37,7 +37,7 @@ class SmbRepository : RemoteFileRepository {
     /** Connects, authenticates and (if a share is set) lists its root. Throws [SmbError]. */
     suspend fun testConnection(server: ServerConfig) = withContext(Dispatchers.IO) {
         SmbPool.invalidate(server.id) // always test with fresh credentials
-        SmbPool.withRetry(server, RetryPolicy(maxAttempts = minOf(2, SettingsStore.current.retryCount))) {
+        SmbPool.withRetry(server, RetryPolicy(maxAttempts = minOf(2, CoreSettings.current.retryCount))) {
             if (server.share.isBlank()) SmbPool.session(server) else SmbPool.share(server).list("")
         }
         Unit
@@ -48,7 +48,7 @@ class SmbRepository : RemoteFileRepository {
      * Hidden/admin shares ($) and non-disk shares are filtered out. Throws [SmbError].
      */
     suspend fun listShares(server: ServerConfig): List<String> = withContext(Dispatchers.IO) {
-        SmbPool.withRetry(server, RetryPolicy(maxAttempts = minOf(2, SettingsStore.current.retryCount))) {
+        SmbPool.withRetry(server, RetryPolicy(maxAttempts = minOf(2, CoreSettings.current.retryCount))) {
             val transport = SMBTransportFactories.SRVSVC.getTransport(SmbPool.session(server))
             ServerService(transport).shares1
                 .filter { (it.type and 0x0FFFFFFF) == 0 } // STYPE_DISKTREE

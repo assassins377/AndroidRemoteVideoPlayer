@@ -29,6 +29,7 @@ object SettingsStore {
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
     val current: AppSettings get() = _settings.value
+    init { com.assassins377.remoteplayer.core.CoreSettings.provider = { _settings.value } }
     private var context: Context? = null
 
     fun init(ctx: Context) {

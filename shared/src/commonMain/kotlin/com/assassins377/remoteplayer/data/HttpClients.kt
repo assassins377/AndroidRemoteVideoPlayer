@@ -1,6 +1,6 @@
 package com.assassins377.remoteplayer.data
 
-import com.assassins377.remoteplayer.settings.SettingsStore
+import com.assassins377.remoteplayer.core.CoreSettings
 import okhttp3.Authenticator
 import okhttp3.Credentials
 import okhttp3.Interceptor
@@ -57,7 +57,7 @@ object HttpClients {
     private val clients = ConcurrentHashMap<ServerConfig, OkHttpClient>()
 
     fun forServer(server: ServerConfig): OkHttpClient = clients.getOrPut(server) {
-        val s = SettingsStore.current
+        val s = CoreSettings.current
         val basicKnown = java.util.concurrent.atomic.AtomicBoolean(false)
         val tm = PinningTrustManager(CertPins.systemTrustManager(), server.pinnedCertSha256)
         val ssl = javax.net.ssl.SSLContext.getInstance("TLS").apply { init(null, arrayOf(tm), null) }

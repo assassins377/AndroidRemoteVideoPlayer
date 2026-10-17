@@ -24,7 +24,7 @@ jobs:
           packages: ''
       - uses: gradle/actions/setup-gradle@v4
       - name: Build, unit tests (incl. Robolectric UI), lint
-        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest lintDebug
+        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest :shared:jvmTest lintDebug
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:

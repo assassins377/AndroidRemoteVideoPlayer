@@ -1,7 +1,6 @@
 package com.assassins377.remoteplayer.data
 
-import com.assassins377.remoteplayer.AppStrings
-import com.assassins377.remoteplayer.R
+import com.assassins377.remoteplayer.core.CoreStrings
 import com.hierynomus.mserref.NtStatus
 import com.hierynomus.mssmb2.SMBApiException
 import com.hierynomus.protocol.transport.TransportException
@@ -12,21 +11,21 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.TimeoutException
 
-enum class SmbErrorKind(val retryable: Boolean, private val res: Int, private val ru: String) {
-    AUTH(false, R.string.err_auth, "Неверный логин или пароль"),
-    ACCESS_DENIED(false, R.string.err_access, "Нет доступа к папке или файлу"),
-    NOT_FOUND(false, R.string.err_not_found, "Папка, файл или общий ресурс не найдены"),
-    HOST_UNKNOWN(false, R.string.err_host_unknown, "Сервер не найден (проверьте адрес)"),
-    UNREACHABLE(true, R.string.err_unreachable, "Сервер недоступен (выключен или другая сеть)"),
-    TIMEOUT(true, R.string.err_timeout, "Превышено время ожидания ответа сервера"),
-    NETWORK(true, R.string.err_network, "Ошибка сети, соединение прервано"),
-    CERT_UNTRUSTED(false, R.string.err_cert_untrusted, "Сертификат сервера не подтверждён (самоподписанный или неизвестный центр)"),
-    CERT_CHANGED(false, R.string.err_cert_changed, "Внимание: сертификат сервера изменился и не совпадает с сохранённым. Возможна подмена сервера"),
-    CERT_HOSTNAME(false, R.string.err_cert_hostname, "Сертификат выдан для другого имени сервера"),
-    UNKNOWN(false, R.string.err_unknown, "Неизвестная ошибка"),
+enum class SmbErrorKind(val retryable: Boolean, val key: String, private val ru: String) {
+    AUTH(false, "err_auth", "Неверный логин или пароль"),
+    ACCESS_DENIED(false, "err_access", "Нет доступа к папке или файлу"),
+    NOT_FOUND(false, "err_not_found", "Папка, файл или общий ресурс не найдены"),
+    HOST_UNKNOWN(false, "err_host_unknown", "Сервер не найден (проверьте адрес)"),
+    UNREACHABLE(true, "err_unreachable", "Сервер недоступен (выключен или другая сеть)"),
+    TIMEOUT(true, "err_timeout", "Превышено время ожидания ответа сервера"),
+    NETWORK(true, "err_network", "Ошибка сети, соединение прервано"),
+    CERT_UNTRUSTED(false, "err_cert_untrusted", "Сертификат сервера не подтверждён (самоподписанный или неизвестный центр)"),
+    CERT_CHANGED(false, "err_cert_changed", "Внимание: сертификат сервера изменился и не совпадает с сохранённым. Возможна подмена сервера"),
+    CERT_HOSTNAME(false, "err_cert_hostname", "Сертификат выдан для другого имени сервера"),
+    UNKNOWN(false, "err_unknown", "Неизвестная ошибка"),
     ;
     /** Localized message (Russian fallback without a Context, e.g. unit tests). */
-    val message: String get() = AppStrings.get(res, ru)
+    val message: String get() = CoreStrings.get(key, ru)
 }
 
 class SmbError(val kind: SmbErrorKind, cause: Throwable?) :

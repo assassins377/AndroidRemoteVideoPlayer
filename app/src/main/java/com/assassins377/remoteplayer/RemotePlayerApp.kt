@@ -1,5 +1,7 @@
 package com.assassins377.remoteplayer
 
+import com.assassins377.remoteplayer.library.init
+
 import kotlinx.coroutines.flow.drop
 import android.app.Application
 import kotlinx.coroutines.launch
@@ -18,7 +20,7 @@ class RemotePlayerApp : Application() {
         com.assassins377.remoteplayer.download.DownloadStore.init(this)
         com.assassins377.remoteplayer.player.Thumbnails.init(this)
         com.assassins377.remoteplayer.player.SubtitleDelayStore.init(this)
-        com.assassins377.remoteplayer.settings.WatchedStore.init(this)
+        com.assassins377.remoteplayer.settings.WatchedStore.init(filesDir)
         com.assassins377.remoteplayer.meta.TmdbRepository.init(this)
         ServerStore.init(this, KeystoreSecretStore())
         // Widget hides videos of removed servers / shows renamed ones.

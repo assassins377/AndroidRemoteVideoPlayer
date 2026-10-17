@@ -110,7 +110,7 @@ object TitleParser {
     )
 
     /** Human-readable size with auto unit (Б/КБ/МБ/ГБ/ТБ), binary multiples. */
-    fun formatSize(bytes: Long, units: List<String> = com.assassins377.remoteplayer.AppStrings.sizeUnits()): String {
+    fun formatSize(bytes: Long, units: List<String> = com.assassins377.remoteplayer.core.CoreStrings.sizeUnits()): String {
         if (bytes < 1024) return "$bytes ${units[0]}"
         var v = bytes.toDouble(); var u = 0
         while (v >= 1024 && u < units.lastIndex) { v /= 1024; u++ }
