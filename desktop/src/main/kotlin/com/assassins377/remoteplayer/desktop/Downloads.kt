@@ -127,8 +127,9 @@ class Downloads(
     suspend fun awaitIdle() { while (_items.value.any { it.status == DownloadStatus.QUEUED || it.status == DownloadStatus.RUNNING }) delay(50) }
 
     companion object {
-        fun defaultFolder(env: Map<String, String> = System.getenv(), home: String = System.getProperty("user.home")): File =
-            File(env["XDG_VIDEOS_DIR"]?.takeIf { it.isNotBlank() } ?: "$home/Videos", "Remote Video Player")
+        fun defaultFolder(env: Map<String, String> = System.getenv(), home: String = System.getProperty("user.home"), windows: Boolean = Os.isWindows): File =
+            if (windows) File(File(env["USERPROFILE"]?.takeIf { it.isNotBlank() } ?: home, "Videos"), "Remote Video Player")
+            else File(env["XDG_VIDEOS_DIR"]?.takeIf { it.isNotBlank() } ?: "$home/Videos", "Remote Video Player")
 
         fun forServers(servers: () -> DesktopServers, d: Dirs) = Downloads(
             File(d.data, "downloads.json"), File(d.config, "download-folder"), defaultFolder(),

@@ -410,3 +410,10 @@ Film.eng.forced.ass
 
 ### Трансляция (Linux)
 Кнопка «Трансляция» в плеере ищет DLNA/UPnP-рендереры (телевизоры, медиаприставки, Kodi, gmediarender) через SSDP и отправляет видео через локальный HTTP-прокси, доступный в LAN (случайный порт, ссылки со случайным токеном; разрешите входящие соединения в файрволе). Управление: пауза, перемотка, стоп (возврат к локальному воспроизведению с той же позиции). Chromecast пока не поддерживается.
+
+## Windows (десктоп)
+
+- Установщик `RemoteVideoPlayer-<версия>-windows-x64.msi` (установка для текущего пользователя, выбор папки) или переносимый `...-windows-x64-portable.zip` (распакуйте и запустите `remote-video-player.exe`).
+- Нужен **64-битный VLC 3.x** (https://www.videolan.org/vlc/). Приложение ищет его через реестр (`HKLM\SOFTWARE\VideoLAN\VLC\InstallDir`) и в `C:\Program Files\VideoLAN\VLC`; если VLC не найден, плеер покажет сообщение со ссылкой.
+- Пароли хранятся в **Диспетчере учётных данных Windows** (записи `RemoteVideoPlayer/...`); если он недоступен — в файле, зашифрованном DPAPI текущего пользователя.
+- Данные: `%APPDATA%\RemoteVideoPlayer` (серверы, настройки), `%LOCALAPPDATA%\RemoteVideoPlayer` (библиотека, позиции, кэш), загрузки — `%USERPROFILE%\Videos\Remote Video Player`.
