@@ -383,3 +383,13 @@ Each video in **Library** has a star (**Add to favourites**). A long press opens
 - Server passwords and the TMDB key are stored encrypted on the device (the encryption key lives in the Android Keystore).
 - The app has no analytics, telemetry, or ads. It connects only to your servers and, if "Load posters and titles" is on, to TMDB (api.themoviedb.org, image.tmdb.org). Only titles and years parsed from file names are sent to TMDB.
 - Server exports contain no passwords.
+
+## Linux (desktop)
+
+The `desktop` module (Compose for Desktop) shares the `shared` module with the Android app.
+
+- Player dependency: system VLC (`sudo apt install vlc`, libvlc 3.x, used via vlcj). Without it the player screen shows an error.
+- Passwords are stored in the Secret Service via `secret-tool` (package `libsecret-tools`). If unavailable, an encrypted file (AES-256-GCM) `~/.config/remoteplayer/secrets.properties` with key `secret.key` (mode 600) is used. Force with `REMOTEPLAYER_SECRETS=file`.
+- Data: `$XDG_CONFIG_HOME/remoteplayer` (servers, settings), `$XDG_DATA_HOME/remoteplayer` (library, positions), `$XDG_CACHE_HOME/remoteplayer` (posters).
+- Extra libvlc args: `REMOTEPLAYER_VLC_ARGS`.
+- Run from source: `./gradlew :desktop:run`.

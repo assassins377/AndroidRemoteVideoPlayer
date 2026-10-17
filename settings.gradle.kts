@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "AndroidRemoteVideoPlayer"
-include(":app", ":shared")
+include(":app", ":shared", ":desktop")

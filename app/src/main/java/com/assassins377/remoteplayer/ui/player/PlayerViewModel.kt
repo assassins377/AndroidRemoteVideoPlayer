@@ -169,7 +169,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
                         .setLanguage(m.language)
                         .setLabel(m.file.name)
                         .setSelectionFlags(
-                            if (m.language != null && m.language.startsWith(settings.subtitleLanguage.take(2)) && settings.subtitleLanguage.isNotBlank())
+                            if (m.language?.startsWith(settings.subtitleLanguage.take(2)) == true && settings.subtitleLanguage.isNotBlank())
                                 C.SELECTION_FLAG_DEFAULT else 0,
                         )
                         .build()
