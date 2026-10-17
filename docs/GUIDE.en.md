@@ -331,6 +331,9 @@ In the player tap **Cast**. The app looks for Chromecast devices (Google Play se
 How it works: the phone serves the video over the local network itself (built-in mini server), so any source works, including password-protected SMB and WebDAV. Keep the phone on and on the same network.
 Limitations: Chromecast plays only formats it supports (usually MP4/H.264, WebM; MKV not always, AC3/DTS audio often not). Seek from the TV remote/Google Home; external subtitles are not sent.
 
+### Downloads
+Long-press a video → **Download to device**. It downloads in the background (notification with percentage), resumes after network drops and retries on errors. The **Downloads** screen (down arrow on the Servers screen) shows progress, used and free space; the bin deletes a file. Downloaded videos play from Downloads, and also automatically from the phone when opened from the server. Files live in the app's folder (Android/data/…/files/downloads) and are removed with the app.
+
 ## 11. Export and import servers
 
 - **Settings → Data → Export servers (no passwords)** saves `remoteplayer-servers.json` to a location you choose. Passwords are **not** included.

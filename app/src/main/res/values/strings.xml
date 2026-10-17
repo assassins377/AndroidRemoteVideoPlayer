@@ -210,4 +210,13 @@
     <string name="cast_none">Устройства не найдены. Телевизор/Chromecast должен быть в той же Wi-Fi сети.</string>
     <string name="casting_to_fmt">Воспроизводится на: %1$s</string>
     <string name="cast_stop">Остановить</string>
+    <string name="downloads">Загрузки</string>
+    <string name="downloads_storage_fmt">Занято загрузками: %1$s · свободно: %2$s</string>
+    <string name="downloads_empty">Нет загрузок. Долгое нажатие на видео → «Скачать на устройство».</string>
+    <string name="download_failed">Ошибка загрузки</string>
+    <string name="download_waiting">Ожидание сети…</string>
+    <string name="download_delete">Удалить</string>
+    <string name="download_delete_q">Удалить скачанный файл с устройства?</string>
+    <string name="download">Скачать на устройство</string>
+    <string name="download_added">Добавлено в загрузки</string>
 </resources>

@@ -169,6 +169,24 @@ fun DetailsSheet(serverId: String, f: RemoteFile, p: ParsedTitle?, m: TmdbMeta?,
             DetailsExtra(details, meta?.overview.orEmpty())
             Text(stringResource(R.string.file_name) + ": " + f.name, style = MaterialTheme.typography.bodySmall)
             if (!f.isDirectory) Button(onClick = onPlay, modifier = Modifier.fillMaxWidth()) { Text("▶") }
+            if (f.isVideo) {
+                val srv = remember(serverId) { com.assassins377.remoteplayer.data.ServerStore.get(serverId) }
+                val dls by com.assassins377.remoteplayer.download.DownloadStore.items.collectAsState()
+                if (srv != null) {
+                    // Android 13+: progress notification needs the runtime permission (download works either way).
+                    val notifPerm = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+                    val ctxN = androidx.compose.ui.platform.LocalContext.current
+                    val askNotifications = {
+                        if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(ctxN, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                            notifPerm.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    val pu = remember(srv, f.path) { com.assassins377.remoteplayer.data.ServerStore.repositoryFor(srv.type).playbackUri(srv, f) }
+                    val have = dls.any { it.uri == pu }
+                    OutlinedButton(enabled = !have, onClick = { askNotifications(); com.assassins377.remoteplayer.download.DownloadStore.enqueue(pu, f.name) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(if (have) R.string.download_added else R.string.download))
+                    }
+                }
+            }
             if (p != null) {
                 OutlinedButton(onClick = { searching = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.tmdb_wrong_match)) }
                 if (ov != null) TextButton(onClick = { TmdbRepository.setOverride(key, null) }, modifier = Modifier.fillMaxWidth()) {
