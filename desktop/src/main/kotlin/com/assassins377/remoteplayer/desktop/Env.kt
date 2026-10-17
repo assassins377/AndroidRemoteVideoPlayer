@@ -24,6 +24,14 @@ import java.io.File
 /** XDG directories: config (~/.config/remoteplayer), data (~/.local/share/remoteplayer), cache (~/.cache/remoteplayer). */
 class Dirs(val config: File, val data: File, val cache: File) {
     companion object {
+        /** Windows: %APPDATA%\\RemoteVideoPlayer (config), %LOCALAPPDATA%\\RemoteVideoPlayer (data, cache); elsewhere XDG. */
+        fun forOs(env: Map<String, String> = System.getenv(), home: String = System.getProperty("user.home"), windows: Boolean = Os.isWindows): Dirs =
+            if (!windows) xdg(env, home) else {
+                val roaming = File(env["APPDATA"]?.takeIf { it.isNotBlank() } ?: "$home\\AppData\\Roaming", "RemoteVideoPlayer")
+                val local = File(env["LOCALAPPDATA"]?.takeIf { it.isNotBlank() } ?: "$home\\AppData\\Local", "RemoteVideoPlayer")
+                Dirs(roaming, local, File(local, "cache"))
+            }
+
         fun xdg(env: Map<String, String> = System.getenv(), home: String = System.getProperty("user.home")): Dirs {
             fun d(k: String, def: String) = File(env[k]?.takeIf { it.isNotBlank() } ?: "$home/$def", "remoteplayer")
             return Dirs(d("XDG_CONFIG_HOME", ".config"), d("XDG_DATA_HOME", ".local/share"), d("XDG_CACHE_HOME", ".cache"))
@@ -103,7 +111,7 @@ object Env {
     /** LAN-reachable stream server for casting (started on first use). */
     val castStream: StreamServer by lazy { StreamServer(null).start() }
 
-    fun init(d: Dirs = Dirs.xdg()) {
+    fun init(d: Dirs = Dirs.forOs()) {
         dirs = d
         listOf(d.config, d.data, d.cache).forEach { it.mkdirs() }
         secrets = Secrets.best(d.config)

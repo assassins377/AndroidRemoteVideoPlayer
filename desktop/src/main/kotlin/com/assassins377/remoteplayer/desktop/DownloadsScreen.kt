@@ -20,7 +20,7 @@ fun DownloadsScreen(nav: Nav) {
     var folder by remember { mutableStateOf(Env.downloads.folder.absolutePath) }
     Column {
         Bar(Strings["downloads"], nav::back) {
-            IconButton(onClick = { runCatching { Env.downloads.folder.mkdirs(); ProcessBuilder("xdg-open", Env.downloads.folder.absolutePath).start() } }) {
+            IconButton(onClick = { runCatching { Env.downloads.folder.mkdirs(); if (Os.isWindows) java.awt.Desktop.getDesktop().open(Env.downloads.folder) else ProcessBuilder("xdg-open", Env.downloads.folder.absolutePath).start() } }) {
                 Icon(Icons.Default.FolderOpen, Strings["open_folder"])
             }
         }

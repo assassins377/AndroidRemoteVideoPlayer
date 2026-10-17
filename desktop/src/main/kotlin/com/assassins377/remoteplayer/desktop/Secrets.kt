@@ -11,7 +11,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-/** Password storage: Secret Service (GNOME Keyring / KWallet via `secret-tool`) when available, else an encrypted file. */
+/** Password storage: Windows Credential Manager (DPAPI file fallback); on Linux Secret Service via `secret-tool`, else an AES-GCM file. */
 interface Secrets {
     val backend: String
     fun get(id: String): String?
@@ -20,9 +20,12 @@ interface Secrets {
 
     companion object {
         /** `REMOTEPLAYER_SECRETS=file` forces the file backend. */
-        fun best(configDir: File, env: Map<String, String> = System.getenv()): Secrets =
-            if (env["REMOTEPLAYER_SECRETS"] != "file" && SecretToolSecrets.available()) SecretToolSecrets()
-            else FileSecrets(File(configDir, "secrets.properties"), File(configDir, "secret.key"))
+        fun best(configDir: File, env: Map<String, String> = System.getenv()): Secrets = when {
+            env["REMOTEPLAYER_SECRETS"] == "file" -> FileSecrets(File(configDir, "secrets.properties"), File(configDir, "secret.key"))
+            Os.isWindows -> if (WinCredSecrets.available()) WinCredSecrets() else DpapiSecrets(File(configDir, "secrets.dpapi.properties"))
+            SecretToolSecrets.available() -> SecretToolSecrets()
+            else -> FileSecrets(File(configDir, "secrets.properties"), File(configDir, "secret.key"))
+        }
     }
 }
 

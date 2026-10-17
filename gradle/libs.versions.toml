@@ -23,6 +23,7 @@ ksp = "2.1.21-2.0.1"
 sqlite = "2.5.2"
 composeMp = "1.8.2"
 vlcj = "4.8.3"
+jmdns = "3.6.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -67,6 +68,7 @@ sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.r
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "coroutines" }
 vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
+jmdns = { group = "org.jmdns", name = "jmdns", version.ref = "jmdns" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 media3-cast = { group = "androidx.media3", name = "media3-cast", version.ref = "media3" }

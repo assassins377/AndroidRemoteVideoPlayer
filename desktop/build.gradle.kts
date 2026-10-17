@@ -16,6 +16,7 @@ dependencies {
     implementation(compose.materialIconsExtended)
     implementation(libs.kotlinx.coroutines.swing)
     implementation(libs.vlcj)
+    implementation(libs.jmdns)
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
 }
@@ -36,7 +37,7 @@ compose.desktop {
     application {
         mainClass = "com.assassins377.remoteplayer.desktop.MainKt"
         nativeDistributions {
-            targetFormats(TargetFormat.Deb, TargetFormat.AppImage)
+            targetFormats(TargetFormat.Deb, TargetFormat.AppImage, TargetFormat.Msi)
             packageName = "remote-video-player"
             packageVersion = appVersion.get()
             description = "Remote Video Player — SMB/WebDAV/HTTP/Jellyfin video player"
@@ -49,6 +50,15 @@ compose.desktop {
                 appCategory = "AudioVideo"
                 debMaintainer = "assassins377@users.noreply.github.com"
                 shortcut = true
+            }
+            windows {
+                iconFile.set(project.file("packaging/icon.ico"))
+                menuGroup = "Remote Video Player"
+                // Stable upgrade code: newer MSIs replace older installs.
+                upgradeUuid = "6f1c2a43-8a5e-4d0b-9c7e-2b5d3f6a9e11"
+                shortcut = true
+                dirChooser = true
+                perUserInstall = true
             }
         }
     }

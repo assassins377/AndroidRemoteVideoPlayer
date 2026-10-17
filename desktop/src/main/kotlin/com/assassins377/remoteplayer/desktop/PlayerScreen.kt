@@ -37,7 +37,11 @@ object Vlc {
     /** Extra libvlc options from REMOTEPLAYER_VLC_ARGS (space-separated), e.g. "--vout=xcb_x11" on X servers without GL. */
     val args: Array<String> get() = System.getenv("REMOTEPLAYER_VLC_ARGS")?.split(' ')?.filter { it.isNotBlank() }?.toTypedArray() ?: emptyArray()
     /** libvlc found (system VLC 3.x). */
-    val available: Boolean by lazy { runCatching { NativeDiscovery().discover() }.getOrDefault(false) }
+    val available: Boolean by lazy {
+        runCatching { NativeDiscovery().discover() }.getOrDefault(false) ||
+            (Os.isWindows && WinVlc.find()?.let { WinVlc.register(it); runCatching { uk.co.caprica.vlcj.binding.lib.LibVlc.libvlc_get_version(); true }.getOrDefault(false) } == true)
+    }
+    const val DOWNLOAD_URL = "https://www.videolan.org/vlc/"
 }
 
 /**
@@ -89,7 +93,11 @@ object PlayerMath {
 @Composable
 fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
     if (!Vlc.available) {
-        Column { Bar(sc.file.name, nav::back); Text(Strings["vlc_missing"], Modifier.padding(24.dp), color = MaterialTheme.colorScheme.error) }
+        Column {
+            Bar(sc.file.name, nav::back)
+            Text(Strings[if (Os.isWindows) "vlc_missing_win" else "vlc_missing"], Modifier.padding(24.dp), color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { runCatching { java.awt.Desktop.getDesktop().browse(java.net.URI(Vlc.DOWNLOAD_URL)) } }, Modifier.padding(horizontal = 16.dp)) { Text(Vlc.DOWNLOAD_URL) }
+        }
         return
     }
     val s = Env.settings.current
@@ -110,7 +118,7 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
     var speed by remember { mutableStateOf(1f) }
     val title = remember(sc) { TitleParser.parse(sc.file.name).display }
     var castPick by remember { mutableStateOf(false) }
-    var casting by remember { mutableStateOf<Renderer?>(null) }
+    var casting by remember { mutableStateOf<CastTarget?>(null) }
     val castScope = rememberCoroutineScope()
     if (castPick) CastDialog(onDismiss = { castPick = false }, onPick = { r ->
         castPick = false
@@ -118,7 +126,7 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
         castScope.launch(Dispatchers.IO) {
             runCatching {
                 val url = Env.castStream.register(sc.server, sc.file.path, Dlna.localAddressFor(r.host))
-                Dlna.play(r, url, title, StreamServer.mime(sc.file.name), at)
+                r.play(url, title, StreamServer.mime(sc.file.name), at)
             }.onSuccess { mp.controls().setPause(true); casting = r }.onFailure { error = it.message }
         }
     })
@@ -170,6 +178,7 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
             }
         }
         onDispose {
+            casting?.let { c -> Thread { c.close() }.start() }
             Keys.handler = null
             runCatching {
                 val t = mp.status().time(); val l = mp.status().length()

@@ -68,3 +68,6 @@ The `desktop` module (Compose for Desktop) shares the `shared` module with the A
 ## F-Droid
 
 Product flavors `full` (Google Cast) and `fdroid` (no proprietary dependencies, DLNA-only casting); fastlane metadata in `fastlane/metadata/android`; draft fdroiddata recipe and reproducible-build notes in [docs/fdroid](docs/fdroid/README.md).
+## Windows
+
+MSI installer and portable zip are built on `windows-latest` (see `.github/workflows/desktop.yml`) and attached to release drafts. Requires 64-bit VLC 3.x. Details: docs/GUIDE.en.md.

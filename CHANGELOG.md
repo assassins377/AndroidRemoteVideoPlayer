@@ -6,6 +6,8 @@
 
 ### Добавлено
 - Подготовка к F-Droid: флейвор `fdroid` без Google Cast/Play services (трансляция только DLNA) и флейвор `full` по умолчанию; метаданные fastlane (RU/EN, описания, скриншоты, changelogs по versionCode); черновик рецепта fdroiddata и заметки о воспроизводимой сборке в `docs/fdroid/`; `dependenciesInfo` отключён. Релизный workflow прикладывает подписанный `...-fdroid-release.apk`.
+- Десктоп: трансляция на Chromecast — собственный минимальный клиент CASTV2 (TLS, protobuf без внешних библиотек, Default Media Receiver: LOAD/PLAY/PAUSE/SEEK/STOP), поиск через mDNS (jmdns, Apache-2.0).
+- Десктоп для Windows: установщик MSI и переносимый zip, поиск VLC (реестр/Program Files) с понятным сообщением, пароли в Диспетчере учётных данных (DPAPI как запасной вариант), пути %APPDATA%/%LOCALAPPDATA%/«Видео», сборка в GitHub Actions и прикрепление к черновику релиза.
 
 ## [1.2.0] — 2026-10-17
 
