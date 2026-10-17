@@ -1,5 +1,6 @@
 package com.assassins377.remoteplayer.desktop
 
+import com.assassins377.remoteplayer.settings.WatchedStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -125,7 +126,14 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
             audio = mp.audio().trackDescriptions().map { Track(it.id(), it.description()) }; audioId = mp.audio().track()
             subs = mp.subpictures().trackDescriptions().map { Track(it.id(), it.description()) }; subId = mp.subpictures().track()
             if (++ticks % 20 == 0 && s.resume && length > 0) Env.resume.save(key, time, length)
-            if (mp.status().state() == uk.co.caprica.vlcj.player.base.State.ENDED) { Env.resume.save(key, length, length); break }
+            if (mp.status().state() == uk.co.caprica.vlcj.player.base.State.ENDED) {
+                Env.resume.save(key, length, length)
+                WatchedStore.set(WatchedStore.key(sc.server.id, sc.file.path), true)
+                val next = com.assassins377.remoteplayer.meta.SeriesGrouper.next(sc.playlist, sc.file)
+                if (next != null && s.autoplayNext) nav.replace(Screen.Player(sc.server, next, sc.playlist))
+                break
+            }
+            if (length > 0 && WatchedStore.shouldMark(time, length)) WatchedStore.set(WatchedStore.key(sc.server.id, sc.file.path), true)
         }
     }
     LaunchedEffect(subDelay) { mp.subpictures().setDelay(subDelay * 1000) }
@@ -165,6 +173,9 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
             Text(PlayerMath.fmt(length))
             TrackMenu(Icons.Default.Audiotrack, Strings["audio"], audio, audioId) { mp.audio().setTrack(it) }
             TrackMenu(Icons.Default.Subtitles, Strings["subtitles"], subs, subId) { mp.subpictures().setTrack(it) }
+            com.assassins377.remoteplayer.meta.SeriesGrouper.next(sc.playlist, sc.file)?.let { n ->
+                IconButton(onClick = { nav.replace(Screen.Player(sc.server, n, sc.playlist)) }) { Icon(Icons.Default.SkipNext, Strings["next_episode"]) }
+            }
             DelayMenu(audioDelay, subDelay, speed, { audioDelay = it }, { subDelay = it }, { speed = it })
             IconButton(onClick = { window?.let { it.placement = if (it.placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen } }) {
                 Icon(Icons.Default.Fullscreen, Strings["fullscreen"])

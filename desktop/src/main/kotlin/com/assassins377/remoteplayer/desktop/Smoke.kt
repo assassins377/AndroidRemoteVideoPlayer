@@ -9,10 +9,11 @@ import javax.imageio.ImageIO
 
 /** `--smoke`: saves a screenshot of the window to $REMOTEPLAYER_SCREENSHOT (default ./desktop-screenshot.png). */
 object Smoke {
-    /** REMOTEPLAYER_SMOKE_OPEN = "library" | "<serverId>:<path>" (folder or video) — initial screen for smoke screenshots. */
+    /** REMOTEPLAYER_SMOKE_OPEN = "library" | "series:<serverId>:<path>" | "<serverId>:<path>" (folder or video) — initial screen for smoke screenshots. */
     fun open(nav: Nav) {
         val o = System.getenv("REMOTEPLAYER_SMOKE_OPEN") ?: return
         if (o == "library") { nav.go(Screen.Library); return }
+        if (o.startsWith("series:")) { val r = o.removePrefix("series:"); Env.servers.get(r.substringBefore(':'))?.let { nav.go(Screen.Series(it, r.substringAfter(':'))) }; return }
         val srv = Env.servers.get(o.substringBefore(':')) ?: return
         val path = o.substringAfter(':')
         val f = com.assassins377.remoteplayer.data.RemoteFile(path.substringAfterLast('/'), path, !path.contains('.'))

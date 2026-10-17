@@ -32,6 +32,7 @@ object Strings {
     fun fmt(key: String, vararg a: Any) = get(key).format(*a)
 
     private val RU = mapOf(
+        "series_view" to "Сериал", "season" to "Сезон %d", "next_episode" to "Следующая серия", "mark_watched" to "Отметить просмотренным", "play_next_unwatched" to "Продолжить",
         "servers" to "Серверы", "add_server" to "Добавить сервер", "edit_server" to "Сервер", "library" to "Библиотека",
         "settings" to "Настройки", "name" to "Название", "type" to "Тип", "host" to "Хост (или хост:порт)", "url" to "Адрес (URL)",
         "share" to "Общий ресурс", "user" to "Логин", "password" to "Пароль", "domain" to "Домен", "save" to "Сохранить",
@@ -52,6 +53,7 @@ object Strings {
         "error" to "Ошибка", "about" to "Remote Video Player для Linux", "fullscreen" to "Во весь экран",
     )
     private val EN = mapOf(
+        "series_view" to "Series", "season" to "Season %d", "next_episode" to "Next episode", "mark_watched" to "Toggle watched", "play_next_unwatched" to "Continue",
         "servers" to "Servers", "add_server" to "Add server", "edit_server" to "Server", "library" to "Library",
         "settings" to "Settings", "name" to "Name", "type" to "Type", "host" to "Host (or host:port)", "url" to "Address (URL)",
         "share" to "Share", "user" to "Username", "password" to "Password", "domain" to "Domain", "save" to "Save",
