@@ -14,8 +14,8 @@ android {
         applicationId = "com.assassins377.remoteplayer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.0.0"
+        versionCode = 11
+        versionName = "1.1.0"
     }
     // Release signing from env (CI secrets / local); without them the release APK is built unsigned.
     val ksFile = System.getenv("KEYSTORE_FILE")?.let { file(it) }?.takeIf { it.exists() }
