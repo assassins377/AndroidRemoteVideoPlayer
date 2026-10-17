@@ -401,3 +401,6 @@ A `RemoteVideoPlayer-<version>-x86_64.AppImage` is also provided: `chmod +x` and
 
 ### Series (Linux)
 In a folder with episodes (SxxEyy or "Season N" subfolders) a "Series" button appears: seasons and episodes, watched marks, "Continue" from the first unwatched one, autoplay of the next episode (autoplayNext setting) and a "Next episode" button in the player.
+
+### Jellyfin (Linux)
+Add a JELLYFIN server (URL, user, password). The root shows libraries and a server-side "Continue" row; the start position comes from the server when there is no local one, progress/stop is reported back, and watched marks are synced.

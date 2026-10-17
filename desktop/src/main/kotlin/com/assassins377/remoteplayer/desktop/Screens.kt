@@ -151,6 +151,7 @@ fun BrowserScreen(nav: Nav, sc: Screen.Browser) {
             error != null -> Column(Modifier.padding(24.dp)) { Text(error!!, color = MaterialTheme.colorScheme.error); TextButton(onClick = { reload++ }) { Text(Strings["refresh"]) } }
             files!!.isEmpty() -> Text(Strings["empty_folder"], Modifier.padding(24.dp))
             else -> LazyColumn {
+                if (sc.server.type == ServerType.JELLYFIN && sc.path.isEmpty()) item { JellyfinResumeRow(nav, sc.server) }
                 items(files!!, key = { it.path }) { f ->
                     FileItem(f) {
                         if (f.isDirectory) nav.go(Screen.Browser(sc.server, f.path.trim('/'))) else if (f.isVideo) nav.go(Screen.Player(sc.server, f))
@@ -229,5 +230,17 @@ fun LibraryScreen(nav: Nav) {
                 FileItem(e.toRemoteFile(), "${srv.name} · /${e.path}") { nav.go(Screen.Player(srv, e.toRemoteFile())) }
             }
         }
+    }
+}
+
+/** Jellyfin "Continue watching" (server-side resume list). */
+@Composable
+private fun JellyfinResumeRow(nav: Nav, srv: com.assassins377.remoteplayer.data.ServerConfig) {
+    var items by remember(srv) { mutableStateOf(emptyList<RemoteFile>()) }
+    LaunchedEffect(srv) { items = runCatching { com.assassins377.remoteplayer.data.JellyfinRepository().resumeItems(srv) }.getOrDefault(emptyList()) }
+    if (items.isEmpty()) return
+    Text(Strings["continue"], style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+    Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items.take(6).forEach { f -> AssistChip(onClick = { nav.go(Screen.Player(srv, f)) }, label = { Text(TitleParser.parse(f.name).display, maxLines = 1) }) }
     }
 }

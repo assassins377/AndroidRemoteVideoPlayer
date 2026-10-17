@@ -26,6 +26,7 @@ class JellyfinRepository : RemoteFileRepository {
         private const val CLIENT = "MediaBrowser Client=\"RemotePlayer\", Device=\"Android\", DeviceId=\"rvp-android\", Version=\"1.0\""
         fun invalidate(serverId: String) { sessions.remove(serverId) }
 
+        const val TICKS_PER_MS = 10_000L
         fun base(server: ServerConfig) = server.host.trimEnd('/')
         fun itemId(path: String) = path.trim('/').substringAfterLast('/').substringBefore('.')
 
@@ -112,6 +113,32 @@ class JellyfinRepository : RemoteFileRepository {
             val b = Request.Builder().url("${base(server)}/Users/${s.userId}/PlayedItems/${itemId(path)}").header("X-Emby-Token", s.token)
             val req = if (played) b.post(ByteArray(0).toRequestBody()).build() else b.delete().build()
             client(server).newCall(req).execute().close()
+        }
+    }
+
+    /** Server-side resume point of a video in ms (0 if none). Blocking. */
+    fun resumePositionMs(server: ServerConfig, path: String): Long = runCatching {
+        val s = session(server)
+        val o = Json.parseToJsonElement(get(server, "${base(server)}/Users/${s.userId}/Items/${itemId(path)}")).jsonObject
+        (o["UserData"]?.jsonObject?.get("PlaybackPositionTicks")?.jsonPrimitive?.longOrNull ?: 0L) / TICKS_PER_MS
+    }.getOrDefault(0L)
+
+    /** "Continue watching" items of the user (paths are rooted at the item id). */
+    suspend fun resumeItems(server: ServerConfig): List<RemoteFile> = withContext(Dispatchers.IO) {
+        val s = session(server)
+        parseItems(get(server, "${base(server)}/Users/${s.userId}/Items/Resume?Limit=20&MediaTypes=Video&Fields=MediaSources,UserData"), "resume").map { it.first }.filter { !it.isDirectory }
+    }
+
+    /** Reports playback progress (stopped = true for the final report). Best effort, blocking. */
+    fun reportProgress(server: ServerConfig, path: String, positionMs: Long, paused: Boolean, stopped: Boolean = false) {
+        runCatching {
+            val s = session(server)
+            val body = buildJsonObject {
+                put("ItemId", itemId(path)); put("PositionTicks", positionMs * TICKS_PER_MS); put("IsPaused", paused); put("CanSeek", true)
+            }.toString()
+            val url = base(server) + if (stopped) "/Sessions/Playing/Stopped" else "/Sessions/Playing/Progress"
+            client(server).newCall(Request.Builder().url(url).header("X-Emby-Token", s.token)
+                .post(body.toRequestBody("application/json".toMediaType())).build()).execute().close()
         }
     }
 

@@ -1,5 +1,6 @@
 package com.assassins377.remoteplayer.desktop
 
+import kotlinx.coroutines.launch
 import com.assassins377.remoteplayer.settings.WatchedStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -111,7 +112,8 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
 
     LaunchedEffect(sc) {
         val url = Env.stream.register(sc.server, sc.file.path)
-        val start = if (s.resume) Env.resume.get(key) ?: 0L else 0L
+        val jf = (repo as? com.assassins377.remoteplayer.data.JellyfinRepository)
+        val start = if (!s.resume) 0L else Env.resume.get(key) ?: jf?.let { withContext(Dispatchers.IO) { it.resumePositionMs(sc.server, sc.file.path) } } ?: 0L
         mp.media().play(url, ":start-time=${start / 1000.0}", ":network-caching=1500")
         if (s.autoLoadSubtitles) runCatching {
             val dir = sc.file.path.trim('/').substringBeforeLast('/', "")
@@ -125,10 +127,14 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
             if (mp.status().state() == uk.co.caprica.vlcj.player.base.State.ERROR) error = Strings["player_error"]
             audio = mp.audio().trackDescriptions().map { Track(it.id(), it.description()) }; audioId = mp.audio().track()
             subs = mp.subpictures().trackDescriptions().map { Track(it.id(), it.description()) }; subId = mp.subpictures().track()
-            if (++ticks % 20 == 0 && s.resume && length > 0) Env.resume.save(key, time, length)
+            if (++ticks % 20 == 0 && s.resume && length > 0) {
+                Env.resume.save(key, time, length)
+                jf?.let { j -> val t = time; val p = !playing; launch(Dispatchers.IO) { j.reportProgress(sc.server, sc.file.path, t, p) } }
+            }
             if (mp.status().state() == uk.co.caprica.vlcj.player.base.State.ENDED) {
                 Env.resume.save(key, length, length)
                 WatchedStore.set(WatchedStore.key(sc.server.id, sc.file.path), true)
+                jf?.let { j -> launch(Dispatchers.IO) { j.setPlayed(sc.server, sc.file.path, true) } }
                 val next = com.assassins377.remoteplayer.meta.SeriesGrouper.next(sc.playlist, sc.file)
                 if (next != null && s.autoplayNext) nav.replace(Screen.Player(sc.server, next, sc.playlist))
                 break
@@ -152,7 +158,11 @@ fun PlayerScreen(nav: Nav, sc: Screen.Player, window: WindowState?) {
         }
         onDispose {
             Keys.handler = null
-            if (s.resume) runCatching { val t = mp.status().time(); val l = mp.status().length(); if (l > 0) Env.resume.save(key, t, l) }
+            runCatching {
+                val t = mp.status().time(); val l = mp.status().length()
+                if (s.resume && l > 0) Env.resume.save(key, t, l)
+                (repo as? com.assassins377.remoteplayer.data.JellyfinRepository)?.let { j -> Thread { j.reportProgress(sc.server, sc.file.path, t, true, stopped = true) }.start() }
+            }
             video.release()
             if (window?.placement == WindowPlacement.Fullscreen) window.placement = WindowPlacement.Floating
         }
