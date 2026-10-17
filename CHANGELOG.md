@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### Добавлено
+- Десктоп: трансляция на Chromecast — собственный минимальный клиент CASTV2 (TLS, protobuf без внешних библиотек, Default Media Receiver: LOAD/PLAY/PAUSE/SEEK/STOP), поиск через mDNS (jmdns, Apache-2.0).
 - Десктоп для Windows: установщик MSI и переносимый zip, поиск VLC (реестр/Program Files) с понятным сообщением, пароли в Диспетчере учётных данных (DPAPI как запасной вариант), пути %APPDATA%/%LOCALAPPDATA%/«Видео», сборка в GitHub Actions и прикрепление к черновику релиза.
 
 ## [1.2.0] — 2026-10-17

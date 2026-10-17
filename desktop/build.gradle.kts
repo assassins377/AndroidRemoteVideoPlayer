@@ -16,6 +16,7 @@ dependencies {
     implementation(compose.materialIconsExtended)
     implementation(libs.kotlinx.coroutines.swing)
     implementation(libs.vlcj)
+    implementation(libs.jmdns)
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
 }

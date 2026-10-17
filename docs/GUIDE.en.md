@@ -411,6 +411,8 @@ The "Download" button on a video in the folder browser queues it (one at a time,
 ### Casting (Linux)
 The "Cast" button in the player discovers DLNA/UPnP renderers (TVs, set-top boxes, Kodi, gmediarender) via SSDP and sends the video through a LAN-reachable local HTTP proxy (random port, random-token URLs; allow incoming connections in your firewall). Controls: pause, seek, stop (returns to local playback at the same position). Chromecast is not supported yet.
 
+### Chromecast (desktop)
+The Cast dialog lists Chromecasts discovered via mDNS (`_googlecast._tcp`) next to DLNA devices. Video goes to the Default Media Receiver through the same LAN proxy; pause, seek and stop are available. Limits: Chromecast plays MP4/WebM (H.264/VP8/VP9, AAC/Opus); MKV is announced as video/mp4 and only plays with compatible codecs; external subtitles are not sent. Discovery needs multicast (UDP 5353) on the network and incoming connections to the app allowed.
 ## Windows (desktop)
 
 - Installer `RemoteVideoPlayer-<version>-windows-x64.msi` (per-user install, folder choice) or the portable `...-windows-x64-portable.zip` (extract and run `remote-video-player.exe`).
